@@ -340,6 +340,22 @@
     .toggle-track::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
     .toggle-switch input:checked + .toggle-track { background: var(--green); }
     .toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); }
+    .toggle-row.dirty { border-color: rgba(240,180,41,0.5); background: rgba(240,180,41,0.04); }
+    .admin-save-bar { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .save-btn { padding: 9px 22px; background: var(--surface2); color: var(--muted); font-weight: 700; font-size: 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: not-allowed; transition: all 0.2s; }
+    .save-btn.has-changes { background: var(--accent); color: #111; border-color: var(--accent); cursor: pointer; }
+    .save-feedback { font-size: 0.78rem; color: var(--green); display: none; }
+    .pending-count { font-size: 0.75rem; color: var(--muted); flex: 1; }
+
+    /* ── Features overview ── */
+    .features-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+    @media(max-width: 600px) { .features-overview { grid-template-columns: repeat(2, 1fr); } }
+    .feat-badge { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+    .feat-icon { font-size: 0.8rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feat-state { font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; letter-spacing: 0.04em; flex-shrink: 0; }
+    .feat-on .feat-state { background: rgba(34,197,94,0.15); color: var(--green); }
+    .feat-off .feat-state { background: rgba(119,119,119,0.12); color: var(--muted); }
+    .feat-on { border-color: rgba(34,197,94,0.2); }
 
     #mainContent { display: none; }
   </style>
@@ -401,8 +417,16 @@
         </div>
       </div>
       <div class="toggles-grid" id="adminToggles"></div>
-      <div class="admin-hint">⏱ Wijzigingen worden binnen 30s door de booth opgepikt</div>
+      <div class="admin-save-bar">
+        <span class="pending-count" id="pendingCount"></span>
+        <span class="save-feedback" id="saveFeedback">✅ Opgeslagen!</span>
+        <button class="save-btn" id="saveBtn" onclick="saveChanges()">Opslaan</button>
+      </div>
     </div>
+
+    <!-- Features overview -->
+    <div class="section-title">Functies</div>
+    <div class="features-overview" id="featuresOverview"></div>
 
     <!-- System info -->
     <div class="section-title">Systeeminformatie</div>
@@ -538,6 +562,7 @@
 
     el('lastUpdated').textContent = `bijgewerkt ${new Date().toLocaleTimeString('nl-BE')}`;
     _lastData = data;
+    renderFeaturesOverview(data);
     if (_adminPassword && el('adminPanel').classList.contains('visible')) renderAdminPanel(data);
     firstLoad = false;
   }
@@ -601,8 +626,9 @@
     { action: 'setSlideshow',       label: '🖼 Slideshow',        key: 'slideshow_enabled'         },
   ];
 
-  let _adminPassword = localStorage.getItem('adminPw') || null;
-  let _lastData      = null;
+  let _adminPassword  = localStorage.getItem('adminPw') || null;
+  let _lastData       = null;
+  let _pendingChanges = {}; // { action: newValue } — not yet sent
 
   // Auto-restore session on load
   if (_adminPassword) {
@@ -671,33 +697,101 @@
     el('adminEventName').textContent = ev ? (ev.name || ev.id) : '(geen event)';
     if (!ev) { el('adminToggles').innerHTML = '<div style="color:var(--muted);font-size:.82rem">Geen actief evenement</div>'; return; }
     el('adminToggles').innerHTML = ADMIN_TOGGLES.map(t => {
-      const checked = ev[t.key] === true ? 'checked' : '';
+      // Use pending value if the user changed it; otherwise use live server value
+      const serverVal = ev[t.key] === true;
+      const hasPending = Object.prototype.hasOwnProperty.call(_pendingChanges, t.action);
+      const effectiveVal = hasPending ? _pendingChanges[t.action] : serverVal;
+      const checked = effectiveVal ? 'checked' : '';
+      const dirty   = hasPending && _pendingChanges[t.action] !== serverVal ? 'dirty' : '';
       return `
-        <div class="toggle-row">
+        <div class="toggle-row ${dirty}">
           <span class="toggle-label">${t.label}</span>
           <label class="toggle-switch">
             <input type="checkbox" ${checked}
-              onchange="sendCommand('${t.action}', this.checked, '${ev.id}')">
+              onchange="markPending('${t.action}', this.checked, '${ev.id}')">
             <span class="toggle-track"></span>
           </label>
         </div>`;
     }).join('');
+    updateSaveBar();
   }
 
-  async function sendCommand(action, value, eventId) {
-    if (!_adminPassword) return;
-    try {
-      const r = await fetch(`${API_BASE}/api/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': _adminPassword },
-        body: JSON.stringify({ eventId, action, value, boothId: BOOTH_ID }),
-        cache: 'no-store',
-      });
-      const d = await r.json();
-      if (!d.ok) console.warn('[admin] command rejected:', d.error);
-    } catch (err) {
-      console.error('[admin] sendCommand failed:', err.message);
+  function markPending(action, value, eventId) {
+    _pendingChanges[action] = value;
+    // Store eventId alongside (grab from last data)
+    _pendingChanges._eventId = eventId;
+    updateSaveBar();
+    // Re-render to show dirty border
+    if (_lastData) renderAdminPanel(_lastData);
+  }
+
+  function updateSaveBar() {
+    const count = Object.keys(_pendingChanges).filter(k => k !== '_eventId').length;
+    const btn   = el('saveBtn');
+    const cnt   = el('pendingCount');
+    if (count > 0) {
+      btn.classList.add('has-changes');
+      cnt.textContent = `${count} wijziging${count > 1 ? 'en' : ''} in afwachting`;
+    } else {
+      btn.classList.remove('has-changes');
+      cnt.textContent = '';
     }
+  }
+
+  async function saveChanges() {
+    const eventId = _pendingChanges._eventId;
+    const actions = Object.keys(_pendingChanges).filter(k => k !== '_eventId');
+    if (!actions.length || !eventId || !_adminPassword) return;
+
+    const btn = el('saveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Opslaan…';
+
+    let allOk = true;
+    for (const action of actions) {
+      try {
+        const r = await fetch(`${API_BASE}/api/command`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Token': _adminPassword },
+          body:    JSON.stringify({ eventId, action, value: _pendingChanges[action], boothId: BOOTH_ID }),
+          cache:   'no-store',
+        });
+        const d = await r.json();
+        if (!d.ok) { allOk = false; console.warn('[admin] command rejected:', d.error); }
+      } catch (err) {
+        allOk = false;
+        console.error('[admin] sendCommand failed:', err.message);
+      }
+    }
+
+    _pendingChanges = {};
+    btn.disabled = false;
+    btn.textContent = 'Opslaan';
+    btn.classList.remove('has-changes');
+    el('pendingCount').textContent = '';
+
+    const fb = el('saveFeedback');
+    fb.textContent = allOk ? '✅ Opgeslagen!' : '⚠ Gedeeltelijk opgeslagen';
+    fb.style.color = allOk ? 'var(--green)' : 'var(--orange)';
+    fb.style.display = 'inline';
+    setTimeout(() => { fb.style.display = 'none'; }, 3000);
+  }
+
+  function renderFeaturesOverview(data) {
+    const ov = el('featuresOverview');
+    if (!ov) return;
+    const ev = data.activeEvent;
+    if (!ev) {
+      ov.innerHTML = '<div style="color:var(--muted);font-size:.82rem">Geen actief evenement</div>';
+      return;
+    }
+    ov.innerHTML = ADMIN_TOGGLES.map(t => {
+      const on = ev[t.key] === true;
+      return `<div class="feat-badge ${on ? 'feat-on' : 'feat-off'}">
+        <span class="feat-icon">${t.label}</span>
+        <span class="feat-state">${on ? 'AAN' : 'UIT'}</span>
+      </div>`;
+    }).join('');
   }
   // ── Boot ─────────────────────────────────────────────────
   fetchHealth();

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Booth Status — datuur.be</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d0d0d;
+      --surface:    #161616;
+      --surface2:   #1f1f1f;
+      --border:     #2a2a2a;
+      --text:       #e8e8e8;
+      --muted:      #777;
+      --accent:     #f0b429;
+      --green:      #22c55e;
+      --red:        #ef4444;
+      --orange:     #f97316;
+      --blue:       #3b82f6;
+      --radius:     14px;
+      --radius-sm:  8px;
+    }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ── */
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 16px 48px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--accent);
+    }
+    .logo span { color: var(--text); }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #lastUpdated {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .refresh-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.78rem;
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: var(--border); }
+
+    /* ── Status pill ── */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .status-pill .dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    .pill-online  { background: rgba(34,197,94,0.12); color: var(--green); }
+    .pill-online  .dot { background: var(--green); }
+    .pill-offline { background: rgba(239,68,68,0.12); color: var(--red); }
+    .pill-offline .dot { background: var(--red); animation: none; }
+    .pill-unknown { background: rgba(119,119,119,0.12); color: var(--muted); }
+    .pill-unknown .dot { background: var(--muted); animation: none; }
+    @keyframes pulse {
+      0%,100% { opacity:1; }
+      50%      { opacity:0.35; }
+    }
+
+    /* ── Hero row ── */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media(max-width: 600px) {
+      .hero { grid-template-columns: 1fr; }
+    }
+    .hero-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+    }
+    .hero-card .label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .hero-card .value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .hero-card .sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .value-green  { color: var(--green); }
+    .value-red    { color: var(--red); }
+    .value-orange { color: var(--orange); }
+    .value-accent { color: var(--accent); }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin: 28px 0 12px;
+    }
+
+    /* ── Service grid ── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .service-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .service-card .svc-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .service-card .svc-status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .service-card .svc-meta {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+    .st-healthy   { color: var(--green); }
+    .st-degraded  { color: var(--orange); }
+    .st-unhealthy { color: var(--red); }
+    .st-unknown   { color: var(--muted); }
+    .service-card.border-healthy   { border-color: rgba(34,197,94,0.25); }
+    .service-card.border-unhealthy { border-color: rgba(239,68,68,0.35); }
+    .service-card.border-degraded  { border-color: rgba(249,115,22,0.35); }
+
+    /* ── Memory bar ── */
+    .memory-bar-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      margin-bottom: 12px;
+    }
+    .mem-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .mem-bar-bg {
+      height: 10px;
+      background: var(--surface2);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .mem-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--green);
+      transition: width 0.5s ease;
+    }
+    .mem-bar-fill.warn  { background: var(--orange); }
+    .mem-bar-fill.crit  { background: var(--red); }
+
+    /* ── History sparkline ── */
+    .sparkline-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+    }
+    .sparkline-wrap svg {
+      width: 100%;
+      height: 60px;
+      display: block;
+    }
+
+    /* ── Errors list ── */
+    .errors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .error-row {
+      background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.78rem;
+    }
+    .error-row .err-svc {
+      font-weight: 600;
+      color: var(--red);
+      margin-right: 6px;
+    }
+    .error-row .err-time {
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    /* ── Info row ── */
+    .info-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .info-cell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+    .info-cell .ic-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .info-cell .ic-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    /* ── Offline overlay ── */
+    #offlineBanner {
+      display: none;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      color: var(--red);
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* ── Loading spinner ── */
+    #loadingState {
+      text-align: center;
+      padding: 80px 0;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #mainContent { display: none; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">#datuur <span>booth status</span></div>
+    <div class="header-meta">
+      <span id="lastUpdated"></span>
+      <button class="refresh-btn" onclick="fetchHealth()">↺ Ververs</button>
+    </div>
+  </header>
+
+  <div id="offlineBanner">⚠ Booth lijkt offline — laatste ping meer dan 2 minuten geleden</div>
+
+  <div id="loadingState">
+    <div class="spinner"></div>
+    <div>Status laden…</div>
+  </div>
+
+  <div id="mainContent">
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-card">
+        <div class="label">Booth status</div>
+        <div id="statusPill"></div>
+        <div class="sub" id="lastPing"></div>
+      </div>
+      <div class="hero-card">
+        <div class="label">Actief evenement</div>
+        <div class="value value-accent" id="activeEvent">—</div>
+        <div class="sub" id="photosToday"></div>
+      </div>
+    </div>
+
+    <!-- System info -->
+    <div class="section-title">Systeeminformatie</div>
+    <div class="info-row" id="infoRow"></div>
+
+    <!-- Memory -->
+    <div class="section-title">Geheugengebruik</div>
+    <div class="memory-bar-wrap">
+      <div class="mem-labels">
+        <span id="memUsed">—</span>
+        <span id="memTotal">—</span>
+      </div>
+      <div class="mem-bar-bg">
+        <div class="mem-bar-fill" id="memBarFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Services -->
+    <div class="section-title">Services</div>
+    <div class="services-grid" id="servicesGrid"></div>
+
+    <!-- Recent errors -->
+    <div id="errorsSection">
+      <div class="section-title">Recente fouten</div>
+      <div class="errors-list" id="errorsList"></div>
+    </div>
+
+    <!-- History sparkline -->
+    <div class="section-title">Geheugen geschiedenis (laatste 100 metingen)</div>
+    <div class="sparkline-wrap">
+      <svg id="sparkline" viewBox="0 0 400 60" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  const API_BASE   = 'https://status-api.datuur.be';
+  const BOOTH_ID   = 'booth-1';
+  const POLL_MS    = 30_000;
+
+  // ── Helpers ─────────────────────────────────────────────
+  function el(id) { return document.getElementById(id); }
+  function fmt(v, unit) { return v != null ? `${v} ${unit}` : '—'; }
+  function fmtUptime(s) {
+    if (s == null) return '—';
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return `${h}u ${m}m`;
+  }
+  function timeAgo(iso) {
+    const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 60)  return `${s}s geleden`;
+    if (s < 3600) return `${Math.floor(s/60)}m geleden`;
+    return `${Math.floor(s/3600)}u geleden`;
+  }
+
+  // ── Render ───────────────────────────────────────────────
+  function render(data) {
+    el('loadingState').style.display  = 'none';
+    el('mainContent').style.display   = 'block';
+
+    const online = data.online !== false;
+    el('offlineBanner').style.display = online ? 'none' : 'block';
+
+    // Status pill
+    const pillClass = online
+      ? (data.health?.overall === 'healthy' ? 'pill-online' : 'pill-offline')
+      : 'pill-offline';
+    const pillLabel = online
+      ? (data.health?.overall === 'healthy' ? 'Online — gezond' : `Online — ${data.health?.overall}`)
+      : 'Offline';
+    el('statusPill').innerHTML = `
+      <div class="status-pill ${pillClass}">
+        <span class="dot"></span>${pillLabel}
+      </div>`;
+    el('lastPing').textContent = data.timestamp
+      ? `Laatste ping: ${timeAgo(data.timestamp)}`
+      : '';
+
+    // Active event
+    el('activeEvent').textContent = data.activeEvent?.name ?? '(geen)';
+    el('photosToday').textContent = data.photosToday != null
+      ? `${data.photosToday} foto's vandaag`
+      : '';
+
+    // Info row
+    const infoCells = [
+      { label: 'Booth ID',    value: data.boothId    ?? '—' },
+      { label: 'Versie',      value: data.appVersion ?? '—' },
+      { label: 'Platform',    value: data.platform   ?? '—' },
+      { label: 'Uptime',      value: fmtUptime(data.uptime) },
+    ];
+    el('infoRow').innerHTML = infoCells.map(c => `
+      <div class="info-cell">
+        <div class="ic-label">${c.label}</div>
+        <div class="ic-value">${c.value}</div>
+      </div>`).join('');
+
+    // Memory bar
+    const mem = data.memory ?? {};
+    const used  = mem.heapUsedMB  ?? 0;
+    const total = mem.heapTotalMB ?? 0;
+    const pct   = total > 0 ? Math.min(100, (used / total) * 100) : 0;
+    el('memUsed').textContent  = `Gebruikt: ${used ? used.toFixed(0) + ' MB' : '—'}`;
+    el('memTotal').textContent = `Totaal heap: ${total ? total.toFixed(0) + ' MB' : '—'}`;
+    const fill = el('memBarFill');
+    fill.style.width = `${pct}%`;
+    fill.className = 'mem-bar-fill' + (pct > 80 ? ' crit' : pct > 60 ? ' warn' : '');
+
+    // Services
+    const services = data.health?.services ?? [];
+    el('servicesGrid').innerHTML = services.map(s => `
+      <div class="service-card border-${s.status}">
+        <div class="svc-name">${s.name}</div>
+        <div class="svc-status st-${s.status}">${s.status}</div>
+        <div class="svc-meta">${s.stats?.operations ?? 0} ops · ${s.stats?.avgResponseTime ?? 0} ms avg</div>
+        ${s.stats?.errorRate ? `<div class="svc-meta">Fouten: ${s.stats.errorRate}</div>` : ''}
+      </div>`).join('') || '<div style="color:var(--muted);font-size:.82rem">Geen servicedata</div>';
+
+    // Errors
+    const errors = services.flatMap(s =>
+      (s.recentErrors ?? []).map(e => ({ ...e, service: s.name }))
+    ).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 8);
+
+    el('errorsSection').style.display = errors.length ? 'block' : 'none';
+    el('errorsList').innerHTML = errors.map(e => `
+      <div class="error-row">
+        <span class="err-svc">${e.service}</span>
+        ${e.message}
+        <div class="err-time">${e.timestamp ? timeAgo(e.timestamp) : ''} — ${e.operation ?? ''}</div>
+      </div>`).join('');
+
+    el('lastUpdated').textContent = `bijgewerkt ${new Date().toLocaleTimeString('nl-BE')}`;
+  }
+
+  // ── Sparkline ────────────────────────────────────────────
+  function renderSparkline(history) {
+    const svg = el('sparkline');
+    if (!history || history.length < 2) {
+      svg.innerHTML = '<text x="50%" y="50%" fill="#555" font-size="11" text-anchor="middle">Geen geschiedenis</text>';
+      return;
+    }
+    const values = history.map(h => h.heapMB ?? 0);
+    const max    = Math.max(...values, 1);
+    const w = 400, h = 60, pad = 4;
+    const xs = values.map((_, i) => pad + (i / (values.length - 1)) * (w - pad * 2));
+    const ys = values.map(v => h - pad - ((v / max) * (h - pad * 2)));
+    const pts = xs.map((x, i) => `${x},${ys[i]}`).join(' ');
+
+    // Fill area
+    const fillPts = `${xs[0]},${h} ` + pts + ` ${xs[xs.length-1]},${h}`;
+    svg.innerHTML = `
+      <polygon points="${fillPts}" fill="rgba(59,130,246,0.15)" />
+      <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>`;
+  }
+
+  // ── Fetch ────────────────────────────────────────────────
+  async function fetchHealth() {
+    try {
+      const [healthRes, historyRes] = await Promise.all([
+        fetch(`${API_BASE}/api/health`),
+        fetch(`${API_BASE}/api/history/${BOOTH_ID}`),
+      ]);
+      if (!healthRes.ok) throw new Error(`HTTP ${healthRes.status}`);
+      const data    = await healthRes.json();
+      const history = historyRes.ok ? await historyRes.json() : [];
+      render(data);
+      renderSparkline(history);
+    } catch (err) {
+      el('loadingState').style.display  = 'none';
+      el('mainContent').style.display   = 'block';
+      el('offlineBanner').style.display = 'block';
+      el('offlineBanner').textContent   = `⚠ Kan statusdata niet ophalen: ${err.message}`;
+      el('lastUpdated').textContent = `Fout om ${new Date().toLocaleTimeString('nl-BE')}`;
+    }
+  }
+
+  // ── Boot ─────────────────────────────────────────────────
+  fetchHealth();
+  setInterval(fetchHealth, POLL_MS);
+</script>
+</body>
+</html>

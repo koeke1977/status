@@ -418,10 +418,11 @@
       </div>
       <div class="toggles-grid" id="adminToggles"></div>
       <div class="admin-save-bar">
-        <span class="pending-count" id="pendingCount"></span>
+        <span class="pending-count" id="pendingCount">Geen wijzigingen</span>
         <span class="save-feedback" id="saveFeedback">✅ Opgeslagen!</span>
-        <button class="save-btn" id="saveBtn" onclick="saveChanges()">Opslaan</button>
+        <button class="save-btn" id="saveBtn" onclick="saveChanges()">💾 Opslaan</button>
       </div>
+      <div class="admin-hint">Klik <strong>Opslaan</strong> om wijzigingen door te sturen. De booth verwerkt ze bij de volgende synchronisatie (~30s).</div>
     </div>
 
     <!-- Features overview -->
@@ -731,10 +732,12 @@
     const cnt   = el('pendingCount');
     if (count > 0) {
       btn.classList.add('has-changes');
-      cnt.textContent = `${count} wijziging${count > 1 ? 'en' : ''} in afwachting`;
+      cnt.textContent = `${count} wijziging${count > 1 ? 'en' : ''} klaar om op te slaan`;
+      cnt.style.color = 'var(--accent)';
     } else {
       btn.classList.remove('has-changes');
-      cnt.textContent = '';
+      cnt.textContent = 'Geen wijzigingen';
+      cnt.style.color = 'var(--muted)';
     }
   }
 

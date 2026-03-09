@@ -310,15 +310,61 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Admin ── */
+    .admin-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: all 0.15s; }
+    .admin-btn:hover, .admin-btn.active { color: var(--accent); border-color: var(--accent); }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; width: 100%; max-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+    .modal-box h3 { font-size: 1rem; margin-bottom: 16px; color: var(--accent); }
+    .modal-box input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.9rem; margin-bottom: 12px; }
+    .modal-box input:focus { outline: none; border-color: var(--accent); }
+    .modal-row { display: flex; gap: 8px; }
+    .btn-primary { flex: 1; padding: 10px; background: var(--accent); color: #111; font-weight: 700; border: none; border-radius: var(--radius-sm); cursor: pointer; }
+    .btn-ghost { padding: 10px 16px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+    .modal-err { color: var(--red); font-size: 0.78rem; margin-bottom: 8px; display: none; }
+    .admin-panel { background: var(--surface); border: 1px solid rgba(240,180,41,0.3); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 20px; display: none; }
+    .admin-panel.visible { display: block; }
+    .admin-panel-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .admin-panel-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+    .admin-event-name { font-size: 0.82rem; color: var(--muted); }
+    .admin-logout { font-size: 0.7rem; color: var(--muted); cursor: pointer; background: none; border: none; text-decoration: underline; padding: 0; }
+    .admin-logout:hover { color: var(--red); }
+    .admin-hint { font-size: 0.7rem; color: var(--muted); margin-top: 12px; }
+    .toggles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media(max-width: 480px) { .toggles-grid { grid-template-columns: 1fr; } }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; gap: 8px; }
+    .toggle-label { font-size: 0.82rem; flex: 1; }
+    .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 999px; cursor: pointer; transition: background 0.2s; }
+    .toggle-track::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
+    .toggle-switch input:checked + .toggle-track { background: var(--green); }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); }
+
     #mainContent { display: none; }
   </style>
 </head>
 <body>
+<!-- Admin login modal -->
+<div id="loginModal" class="modal-backdrop" style="display:none;">
+  <div class="modal-box">
+    <h3>🔐 Beheer inloggen</h3>
+    <div class="modal-err" id="loginErr">Wachtwoord onjuist</div>
+    <input type="password" id="adminPwInput" placeholder="Wachtwoord"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="modal-row">
+      <button class="btn-primary" onclick="doLogin()">Inloggen</button>
+      <button class="btn-ghost" onclick="closeLogin()">Annuleer</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
   <header>
     <div class="logo">#datuur <span>booth status</span></div>
     <div class="header-meta">
       <span id="lastUpdated"></span>
+      <button class="admin-btn" id="adminBtn" onclick="openLogin()">🔒 Beheer</button>
       <button class="refresh-btn" onclick="fetchHealth()">↺ Ververs</button>
     </div>
   </header>
@@ -343,6 +389,19 @@
         <div class="value value-accent" id="activeEvent">—</div>
         <div class="sub" id="photosToday"></div>
       </div>
+    </div>
+
+    <!-- Admin controls -->
+    <div id="adminPanel" class="admin-panel">
+      <div class="admin-panel-header">
+        <span class="admin-panel-title">⚙ Event instellingen</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="admin-event-name" id="adminEventName">—</span>
+          <button class="admin-logout" onclick="adminLogout()">uitloggen</button>
+        </div>
+      </div>
+      <div class="toggles-grid" id="adminToggles"></div>
+      <div class="admin-hint">⏱ Wijzigingen worden binnen 30s door de booth opgepikt</div>
     </div>
 
     <!-- System info -->
@@ -478,6 +537,8 @@
       </div>`).join('');
 
     el('lastUpdated').textContent = `bijgewerkt ${new Date().toLocaleTimeString('nl-BE')}`;
+    _lastData = data;
+    if (_adminPassword && el('adminPanel').classList.contains('visible')) renderAdminPanel(data);
     firstLoad = false;
   }
 
@@ -529,7 +590,115 @@
       el('lastUpdated').textContent = `Fout om ${new Date().toLocaleTimeString('nl-BE')}`;
     }
   }
+  // ── Admin ────────────────────────────────────────────────────────
+  const ADMIN_TOGGLES = [
+    { action: 'setFaceRecognition', label: '👁 Face herkenning',  key: 'face_recognition_enabled' },
+    { action: 'setAutoConfirm',     label: '⚡ Auto-bevestig',    key: 'auto_confirm_recognition' },
+    { action: 'setBoomerang',       label: '🔄 Boomerang GIF',    key: 'boomerang_enabled'         },
+    { action: 'setSendQrEmails',    label: '📧 QR emails',        key: 'send_qr_emails'            },
+    { action: 'setSmileShutter',    label: '😊 Smile sluiter',    key: 'smile_shutter_enabled'     },
+    { action: 'setArFilters',       label: '🎭 AR filters',       key: 'ar_filters_enabled'        },
+    { action: 'setSlideshow',       label: '🖼 Slideshow',        key: 'slideshow_enabled'         },
+  ];
 
+  let _adminPassword = localStorage.getItem('adminPw') || null;
+  let _lastData      = null;
+
+  // Auto-restore session on load
+  if (_adminPassword) {
+    validateAdmin(_adminPassword).then(ok => {
+      if (!ok) { _adminPassword = null; localStorage.removeItem('adminPw'); }
+      else { el('adminBtn').classList.add('active'); el('adminBtn').textContent = '⚙ Beheer'; }
+    });
+  }
+
+  function openLogin() {
+    if (_adminPassword) { toggleAdminPanel(); return; }
+    el('loginModal').style.display = 'flex';
+    el('loginErr').style.display = 'none';
+    el('adminPwInput').value = '';
+    setTimeout(() => el('adminPwInput').focus(), 50);
+  }
+  function closeLogin() { el('loginModal').style.display = 'none'; }
+
+  async function validateAdmin(password) {
+    try {
+      const r = await fetch(`${API_BASE}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+        cache: 'no-store',
+      });
+      const d = await r.json();
+      return d.ok === true;
+    } catch { return false; }
+  }
+
+  async function doLogin() {
+    const pw = el('adminPwInput').value.trim();
+    if (!pw) return;
+    const ok = await validateAdmin(pw);
+    if (!ok) { el('loginErr').style.display = 'block'; return; }
+    _adminPassword = pw;
+    localStorage.setItem('adminPw', pw);
+    closeLogin();
+    el('adminBtn').classList.add('active');
+    el('adminBtn').textContent = '⚙ Beheer';
+    if (_lastData) renderAdminPanel(_lastData);
+    el('adminPanel').classList.add('visible');
+  }
+
+  function adminLogout() {
+    _adminPassword = null;
+    localStorage.removeItem('adminPw');
+    el('adminPanel').classList.remove('visible');
+    el('adminBtn').classList.remove('active');
+    el('adminBtn').textContent = '🔒 Beheer';
+  }
+
+  function toggleAdminPanel() {
+    const panel = el('adminPanel');
+    if (panel.classList.contains('visible')) {
+      panel.classList.remove('visible');
+    } else {
+      if (_lastData) renderAdminPanel(_lastData);
+      panel.classList.add('visible');
+    }
+  }
+
+  function renderAdminPanel(data) {
+    const ev = data.activeEvent;
+    el('adminEventName').textContent = ev ? (ev.name || ev.id) : '(geen event)';
+    if (!ev) { el('adminToggles').innerHTML = '<div style="color:var(--muted);font-size:.82rem">Geen actief evenement</div>'; return; }
+    el('adminToggles').innerHTML = ADMIN_TOGGLES.map(t => {
+      const checked = ev[t.key] === true ? 'checked' : '';
+      return `
+        <div class="toggle-row">
+          <span class="toggle-label">${t.label}</span>
+          <label class="toggle-switch">
+            <input type="checkbox" ${checked}
+              onchange="sendCommand('${t.action}', this.checked, '${ev.id}')">
+            <span class="toggle-track"></span>
+          </label>
+        </div>`;
+    }).join('');
+  }
+
+  async function sendCommand(action, value, eventId) {
+    if (!_adminPassword) return;
+    try {
+      const r = await fetch(`${API_BASE}/api/command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': _adminPassword },
+        body: JSON.stringify({ eventId, action, value, boothId: BOOTH_ID }),
+        cache: 'no-store',
+      });
+      const d = await r.json();
+      if (!d.ok) console.warn('[admin] command rejected:', d.error);
+    } catch (err) {
+      console.error('[admin] sendCommand failed:', err.message);
+    }
+  }
   // ── Boot ─────────────────────────────────────────────────
   fetchHealth();
   setInterval(fetchHealth, POLL_MS);

@@ -404,6 +404,8 @@
         <div class="label">Actief evenement</div>
         <div class="value value-accent" id="activeEvent">—</div>
         <div class="sub" id="photosToday"></div>
+        <div class="sub" id="eventUserCount"></div>
+        <div class="sub" id="eventPartyHosts" style="color:var(--accent);margin-top:3px"></div>
       </div>
     </div>
 
@@ -512,6 +514,14 @@
     el('activeEvent').textContent = data.activeEvent?.name ?? '(geen)';
     el('photosToday').textContent = data.photosToday != null
       ? `${data.photosToday} foto's vandaag`
+      : '';
+    const uCount = data.activeEvent?.userCount;
+    el('eventUserCount').textContent = uCount != null
+      ? `${uCount} gebruiker${uCount !== 1 ? 's' : ''} gekoppeld`
+      : '';
+    const hosts = data.activeEvent?.partyHosts ?? [];
+    el('eventPartyHosts').textContent = hosts.length
+      ? `🎉 ${hosts.join(' · ')}`
       : '';
 
     // Info row

@@ -381,6 +381,7 @@
   const API_BASE   = 'https://status-api.datuur.be';
   const BOOTH_ID   = 'booth-1';
   const POLL_MS    = 30_000;
+  let   firstLoad  = true;
 
   // ── Helpers ─────────────────────────────────────────────
   function el(id) { return document.getElementById(id); }
@@ -441,11 +442,11 @@
 
     // Memory bar
     const mem = data.memory ?? {};
-    const used  = mem.heapUsedMB  ?? 0;
-    const total = mem.heapTotalMB ?? 0;
+    const used  = parseFloat(mem.heapUsedMB)  || 0;
+    const total = parseFloat(mem.heapTotalMB) || 0;
     const pct   = total > 0 ? Math.min(100, (used / total) * 100) : 0;
-    el('memUsed').textContent  = `Gebruikt: ${used ? used.toFixed(0) + ' MB' : '—'}`;
-    el('memTotal').textContent = `Totaal heap: ${total ? total.toFixed(0) + ' MB' : '—'}`;
+    el('memUsed').textContent  = `Gebruikt: ${used ? Math.round(used) + ' MB' : '—'}`;
+    el('memTotal').textContent = `Totaal heap: ${total ? Math.round(total) + ' MB' : '—'}`;
     const fill = el('memBarFill');
     fill.style.width = `${pct}%`;
     fill.className = 'mem-bar-fill' + (pct > 80 ? ' crit' : pct > 60 ? ' warn' : '');
@@ -474,6 +475,7 @@
       </div>`).join('');
 
     el('lastUpdated').textContent = `bijgewerkt ${new Date().toLocaleTimeString('nl-BE')}`;
+    firstLoad = false;
   }
 
   // ── Sparkline ────────────────────────────────────────────
@@ -510,10 +512,17 @@
       render(data);
       renderSparkline(history);
     } catch (err) {
-      el('loadingState').style.display  = 'none';
-      el('mainContent').style.display   = 'block';
-      el('offlineBanner').style.display = 'block';
-      el('offlineBanner').textContent   = `⚠ Kan statusdata niet ophalen: ${err.message}`;
+      if (firstLoad) {
+        // Before first successful load — show a clean error in the spinner area
+        el('loadingState').innerHTML = `
+          <div style="color:var(--red);font-size:.9rem">⚠ Kan status niet ophalen</div>
+          <div style="color:var(--muted);font-size:.78rem;margin-top:8px">${err.message}</div>
+          <div style="color:var(--muted);font-size:.72rem;margin-top:4px">Herlaad de pagina om opnieuw te proberen</div>`;
+        el('loadingState').style.display = 'block';
+      } else {
+        el('offlineBanner').style.display = 'block';
+        el('offlineBanner').textContent   = `⚠ Kan statusdata niet ophalen: ${err.message}`;
+      }
       el('lastUpdated').textContent = `Fout om ${new Date().toLocaleTimeString('nl-BE')}`;
     }
   }

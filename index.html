@@ -366,11 +366,28 @@
   <div class="modal-box">
     <h3>🔐 Beheer inloggen</h3>
     <div class="modal-err" id="loginErr">Wachtwoord onjuist</div>
-    <input type="password" id="adminPwInput" placeholder="Wachtwoord"
-      onkeydown="if(event.key==='Enter')doLogin()">
-    <div class="modal-row">
-      <button class="btn-primary" onclick="doLogin()">Inloggen</button>
-      <button class="btn-ghost" onclick="closeLogin()">Annuleer</button>
+    <!-- Step 1: password -->
+    <div id="loginStep1">
+      <input type="password" id="adminPwInput" placeholder="Wachtwoord"
+        onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="modal-row">
+        <button class="btn-primary" onclick="doLogin()">Volgende →</button>
+        <button class="btn-ghost" onclick="closeLogin()">Annuleer</button>
+      </div>
+    </div>
+    <!-- Step 2: TOTP — only shown when server requests it -->
+    <div id="loginStep2" style="display:none;">
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:10px">
+        📱 Voer de 6-cijferige code in van je authenticator-app
+      </div>
+      <input type="text" id="totpInput" placeholder="000 000" maxlength="7"
+        inputmode="numeric" autocomplete="one-time-code"
+        style="letter-spacing:0.2em;font-size:1.1rem;text-align:center"
+        onkeydown="if(event.key==='Enter')doLoginTotp()">
+      <div class="modal-row" style="margin-top:10px">
+        <button class="btn-primary" onclick="doLoginTotp()">Inloggen</button>
+        <button class="btn-ghost" onclick="resetLogin()">← Terug</button>
+      </div>
     </div>
   </div>
 </div>
@@ -574,7 +591,7 @@
     el('lastUpdated').textContent = `bijgewerkt ${new Date().toLocaleTimeString('nl-BE')}`;
     _lastData = data;
     renderFeaturesOverview(data);
-    if (_adminPassword && el('adminPanel').classList.contains('visible')) renderAdminPanel(data);
+    if (_adminToken && el('adminPanel').classList.contains('visible')) renderAdminPanel(data);
     firstLoad = false;
   }
 
@@ -637,47 +654,98 @@
     { action: 'setSlideshow',       label: '🖼 Slideshow',        key: 'slideshow_enabled'         },
   ];
 
-  let _adminPassword  = localStorage.getItem('adminPw') || null;
-  let _lastData       = null;
+  let _adminToken    = localStorage.getItem('adminToken') || null;
+  let _loginPassword = null; // temp during 2-step flow
+  let _lastData      = null;
   let _pendingChanges = {}; // { action: newValue } — not yet sent
 
-  // Auto-restore session on load
-  if (_adminPassword) {
-    validateAdmin(_adminPassword).then(ok => {
-      if (!ok) { _adminPassword = null; localStorage.removeItem('adminPw'); }
-      else { el('adminBtn').classList.add('active'); el('adminBtn').textContent = '⚙ Beheer'; }
-    });
+  // Migrate: clear old password stored in localStorage
+  if (localStorage.getItem('adminPw')) { localStorage.removeItem('adminPw'); _adminToken = null; }
+
+  // Auto-restore: verify stored session token on page load
+  if (_adminToken) {
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/admin/verify`, {
+          headers: { 'X-Admin-Token': _adminToken }, cache: 'no-store',
+        });
+        const d = await r.json();
+        if (!d.ok) { _adminToken = null; localStorage.removeItem('adminToken'); }
+        else { el('adminBtn').classList.add('active'); el('adminBtn').textContent = '⚙ Beheer'; }
+      } catch { /* ignore — token will be re-checked next time */ }
+    })();
   }
 
   function openLogin() {
-    if (_adminPassword) { toggleAdminPanel(); return; }
+    if (_adminToken) { toggleAdminPanel(); return; }
     el('loginModal').style.display = 'flex';
     el('loginErr').style.display = 'none';
+    el('loginErr').textContent = 'Wachtwoord onjuist';
+    el('loginStep1').style.display = 'block';
+    el('loginStep2').style.display = 'none';
     el('adminPwInput').value = '';
     setTimeout(() => el('adminPwInput').focus(), 50);
   }
-  function closeLogin() { el('loginModal').style.display = 'none'; }
-
-  async function validateAdmin(password) {
-    try {
-      const r = await fetch(`${API_BASE}/api/admin/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-        cache: 'no-store',
-      });
-      const d = await r.json();
-      return d.ok === true;
-    } catch { return false; }
+  function closeLogin() { el('loginModal').style.display = 'none'; _loginPassword = null; }
+  function resetLogin() {
+    el('loginStep1').style.display = 'block';
+    el('loginStep2').style.display = 'none';
+    el('loginErr').style.display = 'none';
+    el('totpInput').value = '';
+    _loginPassword = null;
   }
 
   async function doLogin() {
     const pw = el('adminPwInput').value.trim();
     if (!pw) return;
-    const ok = await validateAdmin(pw);
-    if (!ok) { el('loginErr').style.display = 'block'; return; }
-    _adminPassword = pw;
-    localStorage.setItem('adminPw', pw);
+    el('loginErr').style.display = 'none';
+    try {
+      const r = await fetch(`${API_BASE}/api/admin/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }), cache: 'no-store',
+      });
+      const d = await r.json();
+      if (d.ok && d.token) {
+        _adminToken = d.token;
+        localStorage.setItem('adminToken', d.token);
+        _onLoginSuccess();
+      } else if (d.needsTotp) {
+        _loginPassword = pw;
+        el('loginStep1').style.display = 'none';
+        el('loginStep2').style.display = 'block';
+        setTimeout(() => el('totpInput').focus(), 50);
+      } else {
+        el('loginErr').textContent = 'Wachtwoord onjuist';
+        el('loginErr').style.display = 'block';
+      }
+    } catch { el('loginErr').style.display = 'block'; }
+  }
+
+  async function doLoginTotp() {
+    const code = el('totpInput').value.replace(/\s/g, '');
+    if (code.length !== 6) return;
+    el('loginErr').style.display = 'none';
+    try {
+      const r = await fetch(`${API_BASE}/api/admin/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: _loginPassword, totpCode: code }), cache: 'no-store',
+      });
+      const d = await r.json();
+      if (d.ok && d.token) {
+        _adminToken = d.token;
+        localStorage.setItem('adminToken', d.token);
+        _onLoginSuccess();
+      } else {
+        el('loginErr').textContent = d.error || 'Ongeldige authenticatiecode';
+        el('loginErr').style.display = 'block';
+        el('totpInput').value = '';
+        setTimeout(() => el('totpInput').focus(), 50);
+      }
+    } catch { el('loginErr').style.display = 'block'; }
+  }
+
+  function _onLoginSuccess() {
+    _loginPassword = null;
     closeLogin();
     el('adminBtn').classList.add('active');
     el('adminBtn').textContent = '⚙ Beheer';
@@ -686,8 +754,8 @@
   }
 
   function adminLogout() {
-    _adminPassword = null;
-    localStorage.removeItem('adminPw');
+    _adminToken = null;
+    localStorage.removeItem('adminToken');
     el('adminPanel').classList.remove('visible');
     el('adminBtn').classList.remove('active');
     el('adminBtn').textContent = '🔒 Beheer';
@@ -754,7 +822,7 @@
   async function saveChanges() {
     const eventId = _pendingChanges._eventId;
     const actions = Object.keys(_pendingChanges).filter(k => k !== '_eventId');
-    if (!actions.length || !eventId || !_adminPassword) return;
+    if (!actions.length || !eventId || !_adminToken) return;
 
     const btn = el('saveBtn');
     btn.disabled = true;
@@ -765,7 +833,7 @@
       try {
         const r = await fetch(`${API_BASE}/api/command`, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Token': _adminPassword },
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Token': _adminToken },
           body:    JSON.stringify({ eventId, action, value: _pendingChanges[action], boothId: BOOTH_ID }),
           cache:   'no-store',
         });

@@ -358,33 +358,62 @@
     .feat-on { border-color: rgba(34,197,94,0.2); }
 
     #mainContent { display: none; }
+
+    /* ── Login screen ── */
+    #loginScreen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 200;
+      padding: 24px;
+    }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      width: 100%; max-width: 360px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.6);
+    }
+    .login-brand { font-size: 1.4rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+    .login-brand span { color: var(--text); }
+    .login-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 28px; }
+    .login-step-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 14px; }
+    .login-card .modal-err { margin-bottom: 10px; }
+    .login-card input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.9rem; margin-bottom: 12px; }
+    .login-card input:focus { outline: none; border-color: var(--accent); }
+    .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; padding: 6px 14px; border-radius: 999px; cursor: pointer; transition: all 0.15s; }
+    .logout-btn:hover { color: var(--red); border-color: var(--red); }
   </style>
 </head>
 <body>
-<!-- Admin login modal -->
-<div id="loginModal" class="modal-backdrop" style="display:none;">
-  <div class="modal-box">
-    <h3>🔐 Beheer inloggen</h3>
-    <div class="modal-err" id="loginErr">Wachtwoord onjuist</div>
-    <!-- Step 1: password -->
+<!-- ── Login screen (covers everything until authenticated) ── -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-brand">#datuur <span>booth status</span></div>
+    <div class="login-sub">Beheerders dashboard</div>
+    <div class="modal-err" id="loginErr"></div>
+    <!-- Step 1: wachtwoord -->
     <div id="loginStep1">
+      <div class="login-step-title">🔐 Inloggen</div>
       <input type="password" id="adminPwInput" placeholder="Wachtwoord"
         onkeydown="if(event.key==='Enter')doLogin()">
       <div class="modal-row">
         <button class="btn-primary" onclick="doLogin()">Volgende →</button>
-        <button class="btn-ghost" onclick="closeLogin()">Annuleer</button>
       </div>
     </div>
-    <!-- Step 2: TOTP — only shown when server requests it -->
+    <!-- Step 2: TOTP -->
     <div id="loginStep2" style="display:none;">
-      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:10px">
-        📱 Voer de 6-cijferige code in van je authenticator-app
+      <div class="login-step-title">📱 Verificatie</div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">
+        Voer de 6-cijferige code in van je authenticator-app
       </div>
       <input type="text" id="totpInput" placeholder="000 000" maxlength="7"
         inputmode="numeric" autocomplete="one-time-code"
         style="letter-spacing:0.2em;font-size:1.1rem;text-align:center"
         onkeydown="if(event.key==='Enter')doLoginTotp()">
-      <div class="modal-row" style="margin-top:10px">
+      <div class="modal-row" style="margin-top:12px">
         <button class="btn-primary" onclick="doLoginTotp()">Inloggen</button>
         <button class="btn-ghost" onclick="resetLogin()">← Terug</button>
       </div>
@@ -392,12 +421,14 @@
   </div>
 </div>
 
+<!-- ── App (hidden until authenticated) ── -->
+<div id="appWrapper" style="display:none;">
 <div class="app">
   <header>
     <div class="logo">#datuur <span>booth status</span></div>
     <div class="header-meta">
       <span id="lastUpdated"></span>
-      <button class="admin-btn" id="adminBtn" onclick="openLogin()">🔒 Beheer</button>
+      <button class="logout-btn" onclick="adminLogout()">↩ Uitloggen</button>
       <button class="refresh-btn" onclick="fetchHealth()">↺ Ververs</button>
     </div>
   </header>
@@ -430,10 +461,7 @@
     <div id="adminPanel" class="admin-panel">
       <div class="admin-panel-header">
         <span class="admin-panel-title">⚙ Event instellingen</span>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span class="admin-event-name" id="adminEventName">—</span>
-          <button class="admin-logout" onclick="adminLogout()">uitloggen</button>
-        </div>
+        <span class="admin-event-name" id="adminEventName">—</span>
       </div>
       <div class="toggles-grid" id="adminToggles"></div>
       <div class="admin-save-bar">
@@ -481,6 +509,7 @@
     </div>
   </div>
 </div>
+</div><!-- /appWrapper -->
 
 <script>
   // ── Config ──────────────────────────────────────────────
@@ -591,7 +620,7 @@
     el('lastUpdated').textContent = `bijgewerkt ${new Date().toLocaleTimeString('nl-BE')}`;
     _lastData = data;
     renderFeaturesOverview(data);
-    if (_adminToken && el('adminPanel').classList.contains('visible')) renderAdminPanel(data);
+    if (_adminToken) renderAdminPanel(data);
     firstLoad = false;
   }
 
@@ -657,12 +686,22 @@
   let _adminToken    = localStorage.getItem('adminToken') || null;
   let _loginPassword = null; // temp during 2-step flow
   let _lastData      = null;
-  let _pendingChanges = {}; // { action: newValue } — not yet sent
+  let _pendingChanges = {};
+  let _pollTimer     = null;
 
-  // Migrate: clear old password stored in localStorage
+  // Migrate: clear old password key
   if (localStorage.getItem('adminPw')) { localStorage.removeItem('adminPw'); _adminToken = null; }
 
-  // Auto-restore: verify stored session token on page load
+  // ── Show app after valid login ─────────────────────────────────────────────
+  function _showApp() {
+    el('loginScreen').style.display = 'none';
+    el('appWrapper').style.display  = 'block';
+    el('adminPanel').classList.add('visible');
+    fetchHealth();
+    _pollTimer = setInterval(fetchHealth, POLL_MS);
+  }
+
+  // ── Auto-restore: verify stored token on page load ─────────────────────────
   if (_adminToken) {
     (async () => {
       try {
@@ -670,23 +709,18 @@
           headers: { 'X-Admin-Token': _adminToken }, cache: 'no-store',
         });
         const d = await r.json();
-        if (!d.ok) { _adminToken = null; localStorage.removeItem('adminToken'); }
-        else { el('adminBtn').classList.add('active'); el('adminBtn').textContent = '⚙ Beheer'; }
-      } catch { /* ignore — token will be re-checked next time */ }
+        if (d.ok) {
+          _showApp(); // token still valid — skip login screen
+        } else {
+          _adminToken = null;
+          localStorage.removeItem('adminToken');
+          // loginScreen stays visible (already the default)
+        }
+      } catch { /* network error — loginScreen stays visible */ }
     })();
   }
+  // If no token, loginScreen is already visible by default — nothing to do
 
-  function openLogin() {
-    if (_adminToken) { toggleAdminPanel(); return; }
-    el('loginModal').style.display = 'flex';
-    el('loginErr').style.display = 'none';
-    el('loginErr').textContent = 'Wachtwoord onjuist';
-    el('loginStep1').style.display = 'block';
-    el('loginStep2').style.display = 'none';
-    el('adminPwInput').value = '';
-    setTimeout(() => el('adminPwInput').focus(), 50);
-  }
-  function closeLogin() { el('loginModal').style.display = 'none'; _loginPassword = null; }
   function resetLogin() {
     el('loginStep1').style.display = 'block';
     el('loginStep2').style.display = 'none';
@@ -746,19 +780,27 @@
 
   function _onLoginSuccess() {
     _loginPassword = null;
-    closeLogin();
-    el('adminBtn').classList.add('active');
-    el('adminBtn').textContent = '⚙ Beheer';
-    if (_lastData) renderAdminPanel(_lastData);
-    el('adminPanel').classList.add('visible');
+    el('adminPwInput').value = '';
+    el('totpInput').value    = '';
+    el('loginErr').style.display = 'none';
+    _showApp();
   }
 
   function adminLogout() {
     _adminToken = null;
+    _lastData   = null;
+    _pendingChanges = {};
     localStorage.removeItem('adminToken');
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
     el('adminPanel').classList.remove('visible');
-    el('adminBtn').classList.remove('active');
-    el('adminBtn').textContent = '🔒 Beheer';
+    el('appWrapper').style.display  = 'none';
+    el('loginScreen').style.display = 'flex';
+    el('loadingState').innerHTML = '<div class="spinner"></div><div>Status laden\u2026</div>';
+    el('loadingState').style.display = 'block';
+    el('mainContent').style.display  = 'none';
+    firstLoad = true;
+    resetLogin();
+    setTimeout(() => el('adminPwInput').focus(), 100);
   }
 
   function toggleAdminPanel() {
@@ -875,17 +917,18 @@
     }).join('');
   }
   // ── Boot ─────────────────────────────────────────────────
-  fetchHealth();
-  let _pollTimer = setInterval(fetchHealth, POLL_MS);
+  // fetchHealth() and polling are started by _showApp() after successful login.
+  // If a valid token was found above, _showApp() has already been called.
 
   // Stop polling when the tab is hidden — resume instantly when it's brought back
   // This means zero KV reads when nobody has the page open
   document.addEventListener('visibilitychange', () => {
+    if (!_adminToken) return; // not logged in — nothing to poll
     if (document.hidden) {
       clearInterval(_pollTimer);
       _pollTimer = null;
     } else {
-      fetchHealth(); // immediate refresh on tab focus
+      fetchHealth();
       _pollTimer = setInterval(fetchHealth, POLL_MS);
     }
   });

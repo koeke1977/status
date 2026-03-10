@@ -469,7 +469,7 @@
   // ── Config ──────────────────────────────────────────────
   const API_BASE   = 'https://status-api.datuur.be';
   const BOOTH_ID   = 'booth-1';
-  const POLL_MS    = 30_000;
+  const POLL_MS    = 60_000; // booth only pushes on change — no need to poll more often
   let   firstLoad  = true;
 
   // ── Helpers ─────────────────────────────────────────────
@@ -808,7 +808,19 @@
   }
   // ── Boot ─────────────────────────────────────────────────
   fetchHealth();
-  setInterval(fetchHealth, POLL_MS);
+  let _pollTimer = setInterval(fetchHealth, POLL_MS);
+
+  // Stop polling when the tab is hidden — resume instantly when it's brought back
+  // This means zero KV reads when nobody has the page open
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearInterval(_pollTimer);
+      _pollTimer = null;
+    } else {
+      fetchHealth(); // immediate refresh on tab focus
+      _pollTimer = setInterval(fetchHealth, POLL_MS);
+    }
+  });
 </script>
 </body>
 </html>

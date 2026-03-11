@@ -102,7 +102,11 @@ export default {
         });
       }
     }
-    // Serve static assets (public/index.html) for all other paths
+    // event.datuur.be root → redirect to /event/ (QR display page)
+    if (url.hostname === 'event.datuur.be' && (url.pathname === '/' || url.pathname === '')) {
+      return Response.redirect(new URL('/event/', request.url).toString(), 302);
+    }
+    // Serve static assets (public/index.html, public/event/*, …) for all other paths
     return env.ASSETS.fetch(request);
   },
 };

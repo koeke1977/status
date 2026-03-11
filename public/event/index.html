@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>#datuur — Live Event</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>" />
+    <link rel="stylesheet" href="/event/css/event.css" />
+
+    <!--
+    qrcodejs — lightweight, CDN-hosted QR code generator (~10 KB).
+    Loaded BEFORE the module script so `window.QRCode` is available in event.js.
+  -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+        integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqlBAPbyc17nlAd5+HMFCnSEBBDtMt8UpF8xTiwqb5C1/EcjoeqEOhfX6Q=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+
+    <!-- Full-screen background (desktop: background.png, mobile: background_smartphone.png via CSS) -->
+    <div class="bg-layer"></div>
+
+    <!-- Centered display card -->
+    <main class="page-wrap">
+        <div class="card">
+
+            <!-- Brand -->
+            <div class="brand">#datuur</div>
+
+            <!-- LIVE indicator — shown only when booth is online with an active event -->
+            <div class="live-row" id="liveRow" hidden>
+                <span class="live-dot"></span>
+                <span class="live-label">LIVE</span>
+            </div>
+
+            <!-- Event name — neon red glow -->
+            <h1 class="event-name" id="eventName">…</h1>
+
+            <!-- QR code in neon-red rounded box -->
+            <div class="qr-wrap">
+                <div class="qr-box" id="qrBox">
+                    <!-- Replaced by qrcodejs canvas on first render -->
+                    <div class="qr-placeholder" id="qrPlaceholder">
+                        <span class="qr-spinner">⏳</span>
+                    </div>
+                </div>
+                <p class="qr-hint">📷 Scan om je te registreren</p>
+            </div>
+
+            <!-- Manual refresh -->
+            <button class="refresh-btn" id="refreshBtn" onclick="window._doRefresh()">
+                🔄 Vernieuwen
+            </button>
+
+            <!-- Booth online/offline footer -->
+            <p class="status-footer" id="statusFooter">Verbinding maken…</p>
+
+        </div>
+    </main>
+
+    <!-- event.js is a module; qrcodejs global is already available from the script above -->
+    <script type="module" src="/event/js/event.js"></script>
+</body>
+
+</html>

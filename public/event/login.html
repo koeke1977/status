@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inloggen — datuur event</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>" />
+    <link rel="stylesheet" href="/event/css/event.css" />
+</head>
+
+<body>
+
+    <!-- Full-screen background -->
+    <div class="bg-layer"></div>
+
+    <!-- Centered login card -->
+    <main class="page-wrap">
+        <div class="card login-card">
+
+            <div class="brand">#datuur</div>
+            <p class="login-sub">Live event QR — beheerder inloggen</p>
+
+            <!-- Error message -->
+            <div class="err-msg" id="loginErr" hidden></div>
+
+            <!-- Step 1: password -->
+            <form id="step1" onsubmit="event.preventDefault(); window._doLogin()" autocomplete="on">
+                <div class="form-label">🔑 Inloggen</div>
+                <!-- Hidden username field for password-manager compatibility -->
+                <input type="text" name="username" autocomplete="username" style="display:none" value="admin"
+                    readonly />
+                <input type="password" id="pwInput" name="password" placeholder="Wachtwoord"
+                    autocomplete="current-password" autofocus />
+                <button type="submit" class="login-btn">Volgende →</button>
+            </form>
+
+            <!-- Step 2: TOTP -->
+            <form id="step2" hidden onsubmit="event.preventDefault(); window._doTotp()" autocomplete="on">
+                <div class="form-label">📱 Verificatie</div>
+                <p class="form-hint">Voer de 6-cijferige code in van je authenticator-app</p>
+                <input type="text" id="totpInput" placeholder="000 000" maxlength="7" inputmode="numeric"
+                    autocomplete="one-time-code" style="text-align:center; letter-spacing:0.22em; font-size:1.15rem;" />
+                <div class="btn-row">
+                    <button type="submit" class="login-btn">Inloggen</button>
+                    <button type="button" class="back-btn" onclick="window._backToStep1()">← Terug</button>
+                </div>
+            </form>
+
+        </div>
+    </main>
+
+    <script type="module" src="/event/js/login.js"></script>
+</body>
+
+</html>

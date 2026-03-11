@@ -47,6 +47,9 @@
           <div class="sub" id="photosToday"></div>
           <div class="sub" id="eventUserCount"></div>
           <div class="sub" id="eventPartyHosts"></div>
+          <div id="eventSwitcherWrap" style="display:none;margin-top:10px">
+            <select id="eventSwitcher" class="event-switcher-select" onchange="doSwitchEvent(this.value)"></select>
+          </div>
         </div>
       </div>
 
@@ -78,6 +81,14 @@
           <span class="admin-event-name" id="adminEventName">—</span>
         </div>
         <div class="toggles-grid" id="adminToggles"></div>
+        <div class="admin-section-label">📐 Toegestane layouts</div>
+        <div class="layouts-grid" id="adminLayouts"></div>
+        <div class="admin-section-label">⏱️ Slideshow idle timer</div>
+        <div class="timer-row">
+          <input type="number" id="slideshowTimer" class="timer-input" min="5" max="600" step="5" value="60"
+            oninput="window._adminMarkTimer(this.value, this.dataset.eventId)">
+          <span class="timer-label">sec. inactiviteit voor slideshow</span>
+        </div>
         <div class="admin-save-bar">
           <span class="pending-count" id="pendingCount">Geen wijzigingen</span>
           <span class="save-feedback" id="saveFeedback"></span>
@@ -136,9 +147,9 @@
 
       <!-- Action buttons -->
       <div class="action-buttons">
-        <button class="action-btn primary" onclick="doRefresh()">🔄 Restart Booth</button>
-        <button class="action-btn" onclick="doRefresh()">⚙️ Restart Services</button>
-        <button class="action-btn danger" onclick="doRefresh()">🗑️ Clear Queue</button>
+        <button class="action-btn primary" onclick="doRestartBooth()">🔄 Restart Booth</button>
+        <button class="action-btn" onclick="doRestartServices()">⚙️ Restart Services</button>
+        <button class="action-btn danger" onclick="doClearQueue()">🗑️ Clear Queue</button>
       </div>
 
     </div><!-- /mainContent -->

@@ -102,8 +102,9 @@ export default {
         });
       }
     }
-    // Serve static assets for all non-API paths
-    return env.ASSETS.fetch(request);
+    // For any non-API path, CF serves the matching static file directly.
+    // If no file matches, return 404.
+    return new Response('Not found', { status: 404 });
   },
 };
 

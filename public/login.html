@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inloggen — datuur.be booth status</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>" />
+    <link rel="stylesheet" href="/css/dashboard.css?v=2" />
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, .6);
+        }
+
+        .login-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+
+        .login-brand span {
+            color: var(--text);
+        }
+
+        .login-sub {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-bottom: 32px;
+        }
+
+        .login-step-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 11px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-size: 0.95rem;
+            margin-bottom: 14px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .login-card input:focus {
+            border-color: var(--accent);
+        }
+
+        .err-msg {
+            color: var(--red);
+            font-size: 0.78rem;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            flex: 1;
+            padding: 11px;
+            background: var(--accent);
+            color: #111;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .btn-primary:hover {
+            background: #d9a020;
+        }
+
+        .btn-ghost {
+            padding: 11px 16px;
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.15s;
+        }
+
+        .btn-ghost:hover {
+            color: var(--text);
+            border-color: var(--muted);
+        }
+
+        .totp-hint {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-card">
+        <div class="login-brand">#datuur <span>booth status</span></div>
+        <div class="login-sub">Beheerders dashboard</div>
+
+        <div class="err-msg" id="loginErr"></div>
+
+        <!-- Step 1: wachtwoord -->
+        <form id="step1" onsubmit="event.preventDefault(); doLogin()" autocomplete="on">
+            <div class="login-step-title">🔑 Inloggen</div>
+            <input type="text" name="username" autocomplete="username" style="display:none" value="admin" readonly />
+            <input type="password" id="pwInput" name="password" placeholder="Wachtwoord" autocomplete="current-password"
+                autofocus />
+            <div class="btn-row">
+                <button type="submit" class="btn-primary">Volgende →</button>
+            </div>
+        </form>
+
+        <!-- Step 2: TOTP -->
+        <form id="step2" style="display:none" onsubmit="event.preventDefault(); doLoginTotp()" autocomplete="on">
+            <div class="login-step-title">📱 Verificatie</div>
+            <div class="totp-hint">Voer de 6-cijferige code in van je authenticator-app</div>
+            <input type="text" id="totpInput" placeholder="000 000" maxlength="7" inputmode="numeric"
+                autocomplete="one-time-code" style="letter-spacing:0.2em;font-size:1.1rem;text-align:center"
+                onkeydown="if(event.key==='Enter') doLoginTotp()" />
+            <div class="btn-row">
+                <button type="submit" class="btn-primary">Inloggen</button>
+                <button type="button" class="btn-ghost" onclick="resetToStep1()">← Terug</button>
+            </div>
+        </form>
+    </div>
+
+    <script type="module">
+        import { adminLogin, adminLoginTotp, verifyToken } from '/js/api.js';
+
+        // Already logged in? → go straight to dashboard
+        const stored = localStorage.getItem('adminToken');
+        if (stored) {
+            verifyToken(stored).then(d => {
+                if (d.ok) window.location.href = '/';
+            });
+        }
+
+        let _password = null;
+
+        function showErr(msg) {
+            const el = document.getElementById('loginErr');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+        function hideErr() {
+            document.getElementById('loginErr').style.display = 'none';
+        }
+
+        window.resetToStep1 = () => {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('totpInput').value = '';
+            _password = null;
+            hideErr();
+        };
+
+        window.doLogin = async () => {
+            const pw = document.getElementById('pwInput').value.trim();
+            if (!pw) return;
+            hideErr();
+            try {
+                const d = await adminLogin(pw);
+                if (d.ok && d.token) {
+                    localStorage.setItem('adminToken', d.token);
+                    window.location.href = '/';
+                } else if (d.needsTotp) {
+                    _password = pw;
+                    document.getElementById('step1').style.display = 'none';
+                    document.getElementById('step2').style.display = 'block';
+                    setTimeout(() => document.getElementById('totpInput').focus(), 50);
+                } else {
+                    showErr('Wachtwoord onjuist');
+                }
+            } catch {
+                showErr('Kan niet verbinden met de server');
+            }
+        };
+
+        window.doLoginTotp = async () => {
+            const code = document.getElementById('totpInput').value.replace(/\s/g, '');
+            if (code.length !== 6) return;
+            hideErr();
+            try {
+                const d = await adminLoginTotp(_password, code);
+                if (d.ok && d.token) {
+                    localStorage.setItem('adminToken', d.token);
+                    window.location.href = '/';
+                } else {
+                    showErr(d.error || 'Ongeldige authenticatiecode');
+                    document.getElementById('totpInput').value = '';
+                    setTimeout(() => document.getElementById('totpInput').focus(), 50);
+                }
+            } catch {
+                showErr('Kan niet verbinden met de server');
+            }
+        };
+    </script>
+
+</body>
+
+</html>

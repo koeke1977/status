@@ -3,478 +3,98 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Booth Status — datuur.be</title>
-  <style>
-    /* ── Reset & base ── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg:         #0d0d0d;
-      --surface:    #161616;
-      --surface2:   #1f1f1f;
-      --border:     #2a2a2a;
-      --text:       #e8e8e8;
-      --muted:      #777;
-      --accent:     #f0b429;
-      --green:      #22c55e;
-      --red:        #ef4444;
-      --orange:     #f97316;
-      --blue:       #3b82f6;
-      --radius:     14px;
-      --radius-sm:  8px;
-    }
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      font-size: 16px;
-      line-height: 1.5;
-    }
-
-    /* ── Layout ── */
-    .app {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 20px 16px 48px;
-    }
-
-    /* ── Header ── */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 0 24px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .logo {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--accent);
-    }
-    .logo span { color: var(--text); }
-    .header-meta {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    #lastUpdated {
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-    .refresh-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-size: 0.78rem;
-      padding: 6px 14px;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .refresh-btn:hover { background: var(--border); }
-
-    /* ── Status pill ── */
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 6px 16px;
-      border-radius: 999px;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .status-pill .dot {
-      width: 9px; height: 9px;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-    .pill-online  { background: rgba(34,197,94,0.12); color: var(--green); }
-    .pill-online  .dot { background: var(--green); }
-    .pill-offline { background: rgba(239,68,68,0.12); color: var(--red); }
-    .pill-offline .dot { background: var(--red); animation: none; }
-    .pill-unknown { background: rgba(119,119,119,0.12); color: var(--muted); }
-    .pill-unknown .dot { background: var(--muted); animation: none; }
-    @keyframes pulse {
-      0%,100% { opacity:1; }
-      50%      { opacity:0.35; }
-    }
-
-    /* ── Hero row ── */
-    .hero {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    @media(max-width: 600px) {
-      .hero { grid-template-columns: 1fr; }
-    }
-    .hero-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 22px;
-    }
-    .hero-card .label {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .hero-card .value {
-      font-size: 2.2rem;
-      font-weight: 700;
-      line-height: 1;
-    }
-    .hero-card .sub {
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-    .value-green  { color: var(--green); }
-    .value-red    { color: var(--red); }
-    .value-orange { color: var(--orange); }
-    .value-accent { color: var(--accent); }
-
-    /* ── Section title ── */
-    .section-title {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin: 28px 0 12px;
-    }
-
-    /* ── Service grid ── */
-    .services-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-    }
-    @media(max-width: 600px) {
-      .services-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    .service-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .service-card .svc-name {
-      font-size: 0.82rem;
-      font-weight: 600;
-    }
-    .service-card .svc-status {
-      font-size: 0.72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .service-card .svc-meta {
-      font-size: 0.7rem;
-      color: var(--muted);
-    }
-    .st-healthy   { color: var(--green); }
-    .st-degraded  { color: var(--orange); }
-    .st-unhealthy { color: var(--red); }
-    .st-unknown   { color: var(--muted); }
-    .service-card.border-healthy   { border-color: rgba(34,197,94,0.25); }
-    .service-card.border-unhealthy { border-color: rgba(239,68,68,0.35); }
-    .service-card.border-degraded  { border-color: rgba(249,115,22,0.35); }
-
-    /* ── Memory bar ── */
-    .memory-bar-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 16px 18px;
-      margin-bottom: 12px;
-    }
-    .mem-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-    .mem-bar-bg {
-      height: 10px;
-      background: var(--surface2);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .mem-bar-fill {
-      height: 100%;
-      border-radius: 999px;
-      background: var(--green);
-      transition: width 0.5s ease;
-    }
-    .mem-bar-fill.warn  { background: var(--orange); }
-    .mem-bar-fill.crit  { background: var(--red); }
-
-    /* ── History sparkline ── */
-    .sparkline-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 16px 18px;
-    }
-    .sparkline-wrap svg {
-      width: 100%;
-      height: 60px;
-      display: block;
-    }
-
-    /* ── Errors list ── */
-    .errors-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .error-row {
-      background: rgba(239,68,68,0.06);
-      border: 1px solid rgba(239,68,68,0.2);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      font-size: 0.78rem;
-    }
-    .error-row .err-svc {
-      font-weight: 600;
-      color: var(--red);
-      margin-right: 6px;
-    }
-    .error-row .err-time {
-      color: var(--muted);
-      font-size: 0.7rem;
-    }
-
-    /* ── Info row ── */
-    .info-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-    .info-cell {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-    }
-    .info-cell .ic-label {
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-      margin-bottom: 2px;
-    }
-    .info-cell .ic-value {
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-
-    /* ── Offline overlay ── */
-    #offlineBanner {
-      display: none;
-      background: rgba(239,68,68,0.1);
-      border: 1px solid rgba(239,68,68,0.3);
-      border-radius: var(--radius-sm);
-      padding: 14px 18px;
-      color: var(--red);
-      font-weight: 600;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    /* ── Loading spinner ── */
-    #loadingState {
-      text-align: center;
-      padding: 80px 0;
-      color: var(--muted);
-    }
-    .spinner {
-      width: 32px; height: 32px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin: 0 auto 16px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Admin ── */
-    .admin-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: all 0.15s; }
-    .admin-btn:hover, .admin-btn.active { color: var(--accent); border-color: var(--accent); }
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; z-index: 100; }
-    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; width: 100%; max-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
-    .modal-box h3 { font-size: 1rem; margin-bottom: 16px; color: var(--accent); }
-    .modal-box input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.9rem; margin-bottom: 12px; }
-    .modal-box input:focus { outline: none; border-color: var(--accent); }
-    .modal-row { display: flex; gap: 8px; }
-    .btn-primary { flex: 1; padding: 10px; background: var(--accent); color: #111; font-weight: 700; border: none; border-radius: var(--radius-sm); cursor: pointer; }
-    .btn-ghost { padding: 10px 16px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
-    .modal-err { color: var(--red); font-size: 0.78rem; margin-bottom: 8px; display: none; }
-    .admin-panel { background: var(--surface); border: 1px solid rgba(240,180,41,0.3); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 20px; display: none; }
-    .admin-panel.visible { display: block; }
-    .admin-panel-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-    .admin-panel-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
-    .admin-event-name { font-size: 0.82rem; color: var(--muted); }
-    .admin-logout { font-size: 0.7rem; color: var(--muted); cursor: pointer; background: none; border: none; text-decoration: underline; padding: 0; }
-    .admin-logout:hover { color: var(--red); }
-    .admin-hint { font-size: 0.7rem; color: var(--muted); margin-top: 12px; }
-    .toggles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @media(max-width: 480px) { .toggles-grid { grid-template-columns: 1fr; } }
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; gap: 8px; }
-    .toggle-label { font-size: 0.82rem; flex: 1; }
-    .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-    .toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 999px; cursor: pointer; transition: background 0.2s; }
-    .toggle-track::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
-    .toggle-switch input:checked + .toggle-track { background: var(--green); }
-    .toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); }
-    .toggle-row.dirty { border-color: rgba(240,180,41,0.5); background: rgba(240,180,41,0.04); }
-    .admin-save-bar { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-    .save-btn { padding: 9px 22px; background: var(--surface2); color: var(--muted); font-weight: 700; font-size: 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: not-allowed; transition: all 0.2s; }
-    .save-btn.has-changes { background: var(--accent); color: #111; border-color: var(--accent); cursor: pointer; }
-    .save-feedback { font-size: 0.78rem; color: var(--green); display: none; }
-    .pending-count { font-size: 0.75rem; color: var(--muted); flex: 1; }
-
-    /* ── Features overview ── */
-    .features-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
-    @media(max-width: 600px) { .features-overview { grid-template-columns: repeat(2, 1fr); } }
-    .feat-badge { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-    .feat-icon { font-size: 0.8rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .feat-state { font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; letter-spacing: 0.04em; flex-shrink: 0; }
-    .feat-on .feat-state { background: rgba(34,197,94,0.15); color: var(--green); }
-    .feat-off .feat-state { background: rgba(119,119,119,0.12); color: var(--muted); }
-    .feat-on { border-color: rgba(34,197,94,0.2); }
-
-    #mainContent { display: none; }
-
-    /* ── Login screen ── */
-    #loginScreen {
-      position: fixed; inset: 0;
-      background: var(--bg);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      z-index: 200;
-      padding: 24px;
-    }
-    .login-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 36px 32px;
-      width: 100%; max-width: 360px;
-      box-shadow: 0 8px 40px rgba(0,0,0,.6);
-    }
-    .login-brand { font-size: 1.4rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
-    .login-brand span { color: var(--text); }
-    .login-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 28px; }
-    .login-step-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 14px; }
-    .login-card .modal-err { margin-bottom: 10px; }
-    .login-card input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.9rem; margin-bottom: 12px; }
-    .login-card input:focus { outline: none; border-color: var(--accent); }
-    .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; padding: 6px 14px; border-radius: 999px; cursor: pointer; transition: all 0.15s; }
-    .logout-btn:hover { color: var(--red); border-color: var(--red); }
-  </style>
+  <title>Booth Status � datuur.be</title>
+  <link rel="stylesheet" href="/css/dashboard.css" />
 </head>
 <body>
-<!-- ── Login screen (covers everything until authenticated) ── -->
-<div id="loginScreen">
-  <div class="login-card">
-    <div class="login-brand">#datuur <span>booth status</span></div>
-    <div class="login-sub">Beheerders dashboard</div>
-    <div class="modal-err" id="loginErr"></div>
-    <!-- Step 1: wachtwoord -->
-    <div id="loginStep1">
-      <div class="login-step-title">🔐 Inloggen</div>
-      <input type="password" id="adminPwInput" placeholder="Wachtwoord"
-        onkeydown="if(event.key==='Enter')doLogin()">
-      <div class="modal-row">
-        <button class="btn-primary" onclick="doLogin()">Volgende →</button>
-      </div>
-    </div>
-    <!-- Step 2: TOTP -->
-    <div id="loginStep2" style="display:none;">
-      <div class="login-step-title">📱 Verificatie</div>
-      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">
-        Voer de 6-cijferige code in van je authenticator-app
-      </div>
-      <input type="text" id="totpInput" placeholder="000 000" maxlength="7"
-        inputmode="numeric" autocomplete="one-time-code"
-        style="letter-spacing:0.2em;font-size:1.1rem;text-align:center"
-        onkeydown="if(event.key==='Enter')doLoginTotp()">
-      <div class="modal-row" style="margin-top:12px">
-        <button class="btn-primary" onclick="doLoginTotp()">Inloggen</button>
-        <button class="btn-ghost" onclick="resetLogin()">← Terug</button>
-      </div>
-    </div>
-  </div>
-</div>
 
-<!-- ── App (hidden until authenticated) ── -->
-<div id="appWrapper" style="display:none;">
 <div class="app">
+
+  <!-- Header -->
   <header>
     <div class="logo">#datuur <span>booth status</span></div>
     <div class="header-meta">
       <span id="lastUpdated"></span>
-      <button class="logout-btn" onclick="adminLogout()">↩ Uitloggen</button>
-      <button class="refresh-btn" onclick="fetchHealth()">↺ Ververs</button>
+      <button class="header-btn" onclick="doRefresh()">? Refresh</button>
+      <button class="header-btn danger" onclick="doLogout()">? Logout</button>
     </div>
   </header>
 
-  <div id="offlineBanner">⚠ Booth lijkt offline — laatste ping meer dan 2 minuten geleden</div>
+  <div id="offlineBanner">? Booth lijkt offline � laatste ping meer dan 2 minuten geleden</div>
 
   <div id="loadingState">
     <div class="spinner"></div>
-    <div>Status laden…</div>
+    <div>Status laden�</div>
   </div>
 
   <div id="mainContent">
-    <!-- Hero -->
+
+    <!-- Hero: status + event -->
     <div class="hero">
       <div class="hero-card">
-        <div class="label">Booth status</div>
+        <div class="label">Booth Status</div>
         <div id="statusPill"></div>
         <div class="sub" id="lastPing"></div>
       </div>
       <div class="hero-card">
+        <div class="hc-icon">??</div>
         <div class="label">Actief evenement</div>
-        <div class="value value-accent" id="activeEvent">—</div>
+        <div class="value value-accent" id="activeEventName">�</div>
         <div class="sub" id="photosToday"></div>
         <div class="sub" id="eventUserCount"></div>
-        <div class="sub" id="eventPartyHosts" style="color:var(--accent);margin-top:3px"></div>
+        <div class="sub" id="eventPartyHosts"></div>
       </div>
     </div>
 
-    <!-- Admin controls -->
+    <!-- Stat cards -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="sc-label">Foto's vandaag</div>
+        <div class="sc-value value-accent" id="statPhotos">�</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Gasten gezien</div>
+        <div class="sc-value" id="statGuests">�</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Herkenningen</div>
+        <div class="sc-value value-green" id="statRecognition">�</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Booth Uptime</div>
+        <div class="sc-value" id="statUptime">�</div>
+        <div class="sc-sub" id="statUptimeSince"></div>
+      </div>
+    </div>
+
+    <!-- Admin panel -->
     <div id="adminPanel" class="admin-panel">
       <div class="admin-panel-header">
-        <span class="admin-panel-title">⚙ Event instellingen</span>
-        <span class="admin-event-name" id="adminEventName">—</span>
+        <span class="admin-panel-title">? Event instellingen</span>
+        <span class="admin-event-name" id="adminEventName">�</span>
       </div>
       <div class="toggles-grid" id="adminToggles"></div>
       <div class="admin-save-bar">
         <span class="pending-count" id="pendingCount">Geen wijzigingen</span>
-        <span class="save-feedback" id="saveFeedback">✅ Opgeslagen!</span>
-        <button class="save-btn" id="saveBtn" onclick="saveChanges()">💾 Opslaan</button>
+        <span class="save-feedback" id="saveFeedback"></span>
+        <button class="save-btn" id="saveBtn" onclick="saveChanges()">?? Opslaan</button>
       </div>
       <div class="admin-hint">Klik <strong>Opslaan</strong> om wijzigingen door te sturen. De booth verwerkt ze bij de volgende synchronisatie (~30s).</div>
     </div>
 
-    <!-- Features overview -->
-    <div class="section-title">Functies</div>
-    <div class="features-overview" id="featuresOverview"></div>
+    <!-- Features + Errors side by side -->
+    <div class="two-col">
+      <div>
+        <div class="section-title">Functies</div>
+        <div class="features-overview" id="featuresOverview"></div>
+      </div>
+      <div>
+        <div id="errorsSection" style="display:none">
+          <div class="section-title">Recente fouten</div>
+          <div class="errors-list" id="errorsList"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- System info -->
     <div class="section-title">Systeeminformatie</div>
@@ -484,8 +104,8 @@
     <div class="section-title">Geheugengebruik</div>
     <div class="memory-bar-wrap">
       <div class="mem-labels">
-        <span id="memUsed">—</span>
-        <span id="memTotal">—</span>
+        <span id="memUsed">�</span>
+        <span id="memTotal">�</span>
       </div>
       <div class="mem-bar-bg">
         <div class="mem-bar-fill" id="memBarFill" style="width:0%"></div>
@@ -493,445 +113,32 @@
     </div>
 
     <!-- Services -->
-    <div class="section-title">Services</div>
+    <div class="section-title">Services Status</div>
     <div class="services-grid" id="servicesGrid"></div>
 
-    <!-- Recent errors -->
-    <div id="errorsSection">
-      <div class="section-title">Recente fouten</div>
-      <div class="errors-list" id="errorsList"></div>
-    </div>
-
-    <!-- History sparkline -->
-    <div class="section-title">Geheugen geschiedenis (laatste 100 metingen)</div>
+    <!-- Memory sparkline -->
+    <div class="section-title">Geheugen geschiedenis</div>
     <div class="sparkline-wrap">
-      <svg id="sparkline" viewBox="0 0 400 60" preserveAspectRatio="none"></svg>
+      <div class="sparkline-header">
+        <span class="sparkline-title">Laatste 100 metingen</span>
+        <span class="sparkline-peak" id="sparklinePeak"></span>
+      </div>
+      <svg id="sparkline" viewBox="0 0 400 70" preserveAspectRatio="none"></svg>
+      <div class="sparkline-x-labels">
+        <span>-5m</span><span>-4m</span><span>-3m</span><span>-2m</span><span>-1m</span><span>Nu</span>
+      </div>
     </div>
-  </div>
-</div>
-</div><!-- /appWrapper -->
 
-<script>
-  // ── Config ──────────────────────────────────────────────
-  const API_BASE   = 'https://status-api.datuur.be';
-  const BOOTH_ID   = 'booth-1';
-  const POLL_MS    = 60_000; // booth only pushes on change — no need to poll more often
-  let   firstLoad  = true;
+    <!-- Action buttons -->
+    <div class="action-buttons">
+      <button class="action-btn primary" onclick="doRefresh()">? Restart Booth</button>
+      <button class="action-btn" onclick="doRefresh()">?? Restart Services</button>
+      <button class="action-btn danger" onclick="doRefresh()">?? Clear Queue</button>
+    </div>
 
-  // ── Helpers ─────────────────────────────────────────────
-  function el(id) { return document.getElementById(id); }
-  function fmt(v, unit) { return v != null ? `${v} ${unit}` : '—'; }
-  function fmtUptime(s) {
-    if (s == null) return '—';
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-    return `${h}u ${m}m`;
-  }
-  function timeAgo(iso) {
-    const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-    if (s < 60)  return `${s}s geleden`;
-    if (s < 3600) return `${Math.floor(s/60)}m geleden`;
-    return `${Math.floor(s/3600)}u geleden`;
-  }
+  </div><!-- /mainContent -->
+</div><!-- /app -->
 
-  // ── Render ───────────────────────────────────────────────
-  function render(data) {
-    el('loadingState').style.display  = 'none';
-    el('mainContent').style.display   = 'block';
-
-    const online = data.online !== false;
-    el('offlineBanner').style.display = online ? 'none' : 'block';
-
-    // Status pill
-    const pillClass = online
-      ? (data.health?.overall === 'healthy' ? 'pill-online' : 'pill-offline')
-      : 'pill-offline';
-    const pillLabel = online
-      ? (data.health?.overall === 'healthy' ? 'Online — gezond' : `Online — ${data.health?.overall}`)
-      : 'Offline';
-    el('statusPill').innerHTML = `
-      <div class="status-pill ${pillClass}">
-        <span class="dot"></span>${pillLabel}
-      </div>`;
-    el('lastPing').textContent = data.timestamp
-      ? `Laatste ping: ${timeAgo(data.timestamp)}`
-      : '';
-
-    // Active event
-    el('activeEvent').textContent = data.activeEvent?.name ?? '(geen)';
-    el('photosToday').textContent = data.photosToday != null
-      ? `${data.photosToday} foto's vandaag`
-      : '';
-    const uCount = data.activeEvent?.userCount;
-    el('eventUserCount').textContent = uCount != null
-      ? `${uCount} gebruiker${uCount !== 1 ? 's' : ''} gekoppeld`
-      : '';
-    const hosts = data.activeEvent?.partyHosts ?? [];
-    el('eventPartyHosts').textContent = hosts.length
-      ? `🎉 ${hosts.join(' · ')}`
-      : '';
-
-    // Info row
-    const infoCells = [
-      { label: 'Booth ID',    value: data.boothId    ?? '—' },
-      { label: 'Versie',      value: data.appVersion ?? '—' },
-      { label: 'Platform',    value: data.platform   ?? '—' },
-      { label: 'Uptime',      value: fmtUptime(data.uptime) },
-    ];
-    el('infoRow').innerHTML = infoCells.map(c => `
-      <div class="info-cell">
-        <div class="ic-label">${c.label}</div>
-        <div class="ic-value">${c.value}</div>
-      </div>`).join('');
-
-    // Memory bar
-    const mem = data.memory ?? {};
-    const used  = parseFloat(mem.heapUsedMB)  || 0;
-    const total = parseFloat(mem.heapTotalMB) || 0;
-    const pct   = total > 0 ? Math.min(100, (used / total) * 100) : 0;
-    el('memUsed').textContent  = `Gebruikt: ${used ? Math.round(used) + ' MB' : '—'}`;
-    el('memTotal').textContent = `Totaal heap: ${total ? Math.round(total) + ' MB' : '—'}`;
-    const fill = el('memBarFill');
-    fill.style.width = `${pct}%`;
-    fill.className = 'mem-bar-fill' + (pct > 80 ? ' crit' : pct > 60 ? ' warn' : '');
-
-    // Services
-    const services = data.health?.services ?? [];
-    el('servicesGrid').innerHTML = services.map(s => `
-      <div class="service-card border-${s.status}">
-        <div class="svc-name">${s.name}</div>
-        <div class="svc-status st-${s.status}">${s.status}</div>
-        <div class="svc-meta">${s.stats?.operations ?? 0} ops · ${s.stats?.avgResponseTime ?? 0} ms avg</div>
-        ${s.stats?.errorRate ? `<div class="svc-meta">Fouten: ${s.stats.errorRate}</div>` : ''}
-      </div>`).join('') || '<div style="color:var(--muted);font-size:.82rem">Geen servicedata</div>';
-
-    // Errors
-    const errors = services.flatMap(s =>
-      (s.recentErrors ?? []).map(e => ({ ...e, service: s.name }))
-    ).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 8);
-
-    el('errorsSection').style.display = errors.length ? 'block' : 'none';
-    el('errorsList').innerHTML = errors.map(e => `
-      <div class="error-row">
-        <span class="err-svc">${e.service}</span>
-        ${e.message}
-        <div class="err-time">${e.timestamp ? timeAgo(e.timestamp) : ''} — ${e.operation ?? ''}</div>
-      </div>`).join('');
-
-    el('lastUpdated').textContent = `bijgewerkt ${new Date().toLocaleTimeString('nl-BE')}`;
-    _lastData = data;
-    renderFeaturesOverview(data);
-    if (_adminToken) renderAdminPanel(data);
-    firstLoad = false;
-  }
-
-  // ── Sparkline ────────────────────────────────────────────
-  function renderSparkline(history) {
-    const svg = el('sparkline');
-    if (!history || history.length < 2) {
-      svg.innerHTML = '<text x="50%" y="50%" fill="#555" font-size="11" text-anchor="middle">Geen geschiedenis</text>';
-      return;
-    }
-    const values = history.map(h => h.heapMB ?? 0);
-    const max    = Math.max(...values, 1);
-    const w = 400, h = 60, pad = 4;
-    const xs = values.map((_, i) => pad + (i / (values.length - 1)) * (w - pad * 2));
-    const ys = values.map(v => h - pad - ((v / max) * (h - pad * 2)));
-    const pts = xs.map((x, i) => `${x},${ys[i]}`).join(' ');
-
-    // Fill area
-    const fillPts = `${xs[0]},${h} ` + pts + ` ${xs[xs.length-1]},${h}`;
-    svg.innerHTML = `
-      <polygon points="${fillPts}" fill="rgba(59,130,246,0.15)" />
-      <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>`;
-  }
-
-  // ── Fetch ────────────────────────────────────────────────
-  async function fetchHealth() {
-    try {
-      const [healthRes, historyRes] = await Promise.all([
-        fetch(`${API_BASE}/api/health`,             { cache: 'no-store' }),
-        fetch(`${API_BASE}/api/history/${BOOTH_ID}`, { cache: 'no-store' }),
-      ]);
-      if (!healthRes.ok) throw new Error(`HTTP ${healthRes.status}`);
-      const data    = await healthRes.json();
-      const history = historyRes.ok ? await historyRes.json() : [];
-      render(data);
-      renderSparkline(history);
-    } catch (err) {
-      if (firstLoad) {
-        // Before first successful load — show a clean error in the spinner area
-        el('loadingState').innerHTML = `
-          <div style="color:var(--red);font-size:.9rem">⚠ Kan status niet ophalen</div>
-          <div style="color:var(--muted);font-size:.78rem;margin-top:8px">${err.message}</div>
-          <div style="color:var(--muted);font-size:.72rem;margin-top:4px">Herlaad de pagina om opnieuw te proberen</div>`;
-        el('loadingState').style.display = 'block';
-      } else {
-        el('offlineBanner').style.display = 'block';
-        el('offlineBanner').textContent   = `⚠ Kan statusdata niet ophalen: ${err.message}`;
-      }
-      el('lastUpdated').textContent = `Fout om ${new Date().toLocaleTimeString('nl-BE')}`;
-    }
-  }
-  // ── Admin ────────────────────────────────────────────────────────
-  const ADMIN_TOGGLES = [
-    { action: 'setFaceRecognition', label: '👁 Face herkenning',  key: 'face_recognition_enabled' },
-    { action: 'setAutoConfirm',     label: '⚡ Auto-bevestig',    key: 'auto_confirm_recognition' },
-    { action: 'setBoomerang',       label: '🔄 Boomerang GIF',    key: 'boomerang_enabled'         },
-    { action: 'setSendQrEmails',    label: '📧 QR emails',        key: 'send_qr_emails'            },
-    { action: 'setSmileShutter',    label: '😊 Smile sluiter',    key: 'smile_shutter_enabled'     },
-    { action: 'setArFilters',       label: '🎭 AR filters',       key: 'ar_filters_enabled'        },
-    { action: 'setSlideshow',       label: '🖼 Slideshow',        key: 'slideshow_enabled'         },
-  ];
-
-  let _adminToken    = localStorage.getItem('adminToken') || null;
-  let _loginPassword = null; // temp during 2-step flow
-  let _lastData      = null;
-  let _pendingChanges = {};
-  let _pollTimer     = null;
-
-  // Migrate: clear old password key
-  if (localStorage.getItem('adminPw')) { localStorage.removeItem('adminPw'); _adminToken = null; }
-
-  // ── Show app after valid login ─────────────────────────────────────────────
-  function _showApp() {
-    el('loginScreen').style.display = 'none';
-    el('appWrapper').style.display  = 'block';
-    el('adminPanel').classList.add('visible');
-    fetchHealth();
-    _pollTimer = setInterval(fetchHealth, POLL_MS);
-  }
-
-  // ── Auto-restore: verify stored token on page load ─────────────────────────
-  if (_adminToken) {
-    (async () => {
-      try {
-        const r = await fetch(`${API_BASE}/api/admin/verify`, {
-          headers: { 'X-Admin-Token': _adminToken }, cache: 'no-store',
-        });
-        const d = await r.json();
-        if (d.ok) {
-          _showApp(); // token still valid — skip login screen
-        } else {
-          _adminToken = null;
-          localStorage.removeItem('adminToken');
-          // loginScreen stays visible (already the default)
-        }
-      } catch { /* network error — loginScreen stays visible */ }
-    })();
-  }
-  // If no token, loginScreen is already visible by default — nothing to do
-
-  function resetLogin() {
-    el('loginStep1').style.display = 'block';
-    el('loginStep2').style.display = 'none';
-    el('loginErr').style.display = 'none';
-    el('totpInput').value = '';
-    _loginPassword = null;
-  }
-
-  async function doLogin() {
-    const pw = el('adminPwInput').value.trim();
-    if (!pw) return;
-    el('loginErr').style.display = 'none';
-    try {
-      const r = await fetch(`${API_BASE}/api/admin/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw }), cache: 'no-store',
-      });
-      const d = await r.json();
-      if (d.ok && d.token) {
-        _adminToken = d.token;
-        localStorage.setItem('adminToken', d.token);
-        _onLoginSuccess();
-      } else if (d.needsTotp) {
-        _loginPassword = pw;
-        el('loginStep1').style.display = 'none';
-        el('loginStep2').style.display = 'block';
-        setTimeout(() => el('totpInput').focus(), 50);
-      } else {
-        el('loginErr').textContent = 'Wachtwoord onjuist';
-        el('loginErr').style.display = 'block';
-      }
-    } catch { el('loginErr').style.display = 'block'; }
-  }
-
-  async function doLoginTotp() {
-    const code = el('totpInput').value.replace(/\s/g, '');
-    if (code.length !== 6) return;
-    el('loginErr').style.display = 'none';
-    try {
-      const r = await fetch(`${API_BASE}/api/admin/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: _loginPassword, totpCode: code }), cache: 'no-store',
-      });
-      const d = await r.json();
-      if (d.ok && d.token) {
-        _adminToken = d.token;
-        localStorage.setItem('adminToken', d.token);
-        _onLoginSuccess();
-      } else {
-        el('loginErr').textContent = d.error || 'Ongeldige authenticatiecode';
-        el('loginErr').style.display = 'block';
-        el('totpInput').value = '';
-        setTimeout(() => el('totpInput').focus(), 50);
-      }
-    } catch { el('loginErr').style.display = 'block'; }
-  }
-
-  function _onLoginSuccess() {
-    _loginPassword = null;
-    el('adminPwInput').value = '';
-    el('totpInput').value    = '';
-    el('loginErr').style.display = 'none';
-    _showApp();
-  }
-
-  function adminLogout() {
-    _adminToken = null;
-    _lastData   = null;
-    _pendingChanges = {};
-    localStorage.removeItem('adminToken');
-    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
-    el('adminPanel').classList.remove('visible');
-    el('appWrapper').style.display  = 'none';
-    el('loginScreen').style.display = 'flex';
-    el('loadingState').innerHTML = '<div class="spinner"></div><div>Status laden\u2026</div>';
-    el('loadingState').style.display = 'block';
-    el('mainContent').style.display  = 'none';
-    firstLoad = true;
-    resetLogin();
-    setTimeout(() => el('adminPwInput').focus(), 100);
-  }
-
-  function toggleAdminPanel() {
-    const panel = el('adminPanel');
-    if (panel.classList.contains('visible')) {
-      panel.classList.remove('visible');
-    } else {
-      if (_lastData) renderAdminPanel(_lastData);
-      panel.classList.add('visible');
-    }
-  }
-
-  function renderAdminPanel(data) {
-    const ev = data.activeEvent;
-    el('adminEventName').textContent = ev ? (ev.name || ev.id) : '(geen event)';
-    if (!ev) { el('adminToggles').innerHTML = '<div style="color:var(--muted);font-size:.82rem">Geen actief evenement</div>'; return; }
-    el('adminToggles').innerHTML = ADMIN_TOGGLES.map(t => {
-      // Use pending value if the user changed it; otherwise use live server value
-      const serverVal = ev[t.key] === true;
-      const hasPending = Object.prototype.hasOwnProperty.call(_pendingChanges, t.action);
-      const effectiveVal = hasPending ? _pendingChanges[t.action] : serverVal;
-      const checked = effectiveVal ? 'checked' : '';
-      const dirty   = hasPending && _pendingChanges[t.action] !== serverVal ? 'dirty' : '';
-      return `
-        <div class="toggle-row ${dirty}">
-          <span class="toggle-label">${t.label}</span>
-          <label class="toggle-switch">
-            <input type="checkbox" ${checked}
-              onchange="markPending('${t.action}', this.checked, '${ev.id}')">
-            <span class="toggle-track"></span>
-          </label>
-        </div>`;
-    }).join('');
-    updateSaveBar();
-  }
-
-  function markPending(action, value, eventId) {
-    _pendingChanges[action] = value;
-    // Store eventId alongside (grab from last data)
-    _pendingChanges._eventId = eventId;
-    updateSaveBar();
-    // Re-render to show dirty border
-    if (_lastData) renderAdminPanel(_lastData);
-  }
-
-  function updateSaveBar() {
-    const count = Object.keys(_pendingChanges).filter(k => k !== '_eventId').length;
-    const btn   = el('saveBtn');
-    const cnt   = el('pendingCount');
-    if (count > 0) {
-      btn.classList.add('has-changes');
-      cnt.textContent = `${count} wijziging${count > 1 ? 'en' : ''} klaar om op te slaan`;
-      cnt.style.color = 'var(--accent)';
-    } else {
-      btn.classList.remove('has-changes');
-      cnt.textContent = 'Geen wijzigingen';
-      cnt.style.color = 'var(--muted)';
-    }
-  }
-
-  async function saveChanges() {
-    const eventId = _pendingChanges._eventId;
-    const actions = Object.keys(_pendingChanges).filter(k => k !== '_eventId');
-    if (!actions.length || !eventId || !_adminToken) return;
-
-    const btn = el('saveBtn');
-    btn.disabled = true;
-    btn.textContent = 'Opslaan…';
-
-    let allOk = true;
-    for (const action of actions) {
-      try {
-        const r = await fetch(`${API_BASE}/api/command`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Token': _adminToken },
-          body:    JSON.stringify({ eventId, action, value: _pendingChanges[action], boothId: BOOTH_ID }),
-          cache:   'no-store',
-        });
-        const d = await r.json();
-        if (!d.ok) { allOk = false; console.warn('[admin] command rejected:', d.error); }
-      } catch (err) {
-        allOk = false;
-        console.error('[admin] sendCommand failed:', err.message);
-      }
-    }
-
-    _pendingChanges = {};
-    btn.disabled = false;
-    btn.textContent = 'Opslaan';
-    btn.classList.remove('has-changes');
-    el('pendingCount').textContent = '';
-
-    const fb = el('saveFeedback');
-    fb.textContent = allOk ? '✅ Opgeslagen!' : '⚠ Gedeeltelijk opgeslagen';
-    fb.style.color = allOk ? 'var(--green)' : 'var(--orange)';
-    fb.style.display = 'inline';
-    setTimeout(() => { fb.style.display = 'none'; }, 3000);
-  }
-
-  function renderFeaturesOverview(data) {
-    const ov = el('featuresOverview');
-    if (!ov) return;
-    const ev = data.activeEvent;
-    if (!ev) {
-      ov.innerHTML = '<div style="color:var(--muted);font-size:.82rem">Geen actief evenement</div>';
-      return;
-    }
-    ov.innerHTML = ADMIN_TOGGLES.map(t => {
-      const on = ev[t.key] === true;
-      return `<div class="feat-badge ${on ? 'feat-on' : 'feat-off'}">
-        <span class="feat-icon">${t.label}</span>
-        <span class="feat-state">${on ? 'AAN' : 'UIT'}</span>
-      </div>`;
-    }).join('');
-  }
-  // ── Boot ─────────────────────────────────────────────────
-  // fetchHealth() and polling are started by _showApp() after successful login.
-  // If a valid token was found above, _showApp() has already been called.
-
-  // Stop polling when the tab is hidden — resume instantly when it's brought back
-  // This means zero KV reads when nobody has the page open
-  document.addEventListener('visibilitychange', () => {
-    if (!_adminToken) return; // not logged in — nothing to poll
-    if (document.hidden) {
-      clearInterval(_pollTimer);
-      _pollTimer = null;
-    } else {
-      fetchHealth();
-      _pollTimer = setInterval(fetchHealth, POLL_MS);
-    }
-  });
-</script>
+<script type="module" src="/js/dashboard.js"></script>
 </body>
 </html>

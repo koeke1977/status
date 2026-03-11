@@ -102,9 +102,11 @@ export default {
         });
       }
     }
-    // For any non-API path, CF serves the matching static file directly.
-    // If no file matches, return 404.
-    return new Response('Not found', { status: 404 });
+    // Serve the matching static asset from CF asset storage.
+    // env.ASSETS.fetch() resolves the path against uploaded files and returns
+    // the file directly — it does NOT re-invoke this Worker.
+    // This is always reliable regardless of CF edge-cache state.
+    return env.ASSETS.fetch(request);
   },
 };
 

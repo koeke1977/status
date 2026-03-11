@@ -9,11 +9,19 @@ export default {
     // on the same origin while forwarding requests server-side.
     if (url.pathname.startsWith('/api/')) {
       const upstreamUrl = new URL(url.pathname + url.search, API_UPSTREAM);
-      return fetch(new Request(upstreamUrl.toString(), {
-        method: request.method,
-        headers: request.headers,
-        body: ['GET', 'HEAD', 'OPTIONS'].includes(request.method) ? undefined : request.body,
-      }));
+      try {
+        return await fetch(upstreamUrl.toString(), {
+          method:   request.method,
+          headers:  request.headers,
+          body:     ['GET', 'HEAD', 'OPTIONS'].includes(request.method) ? undefined : request.body,
+          redirect: 'follow',
+        });
+      } catch {
+        return new Response(JSON.stringify({ ok: false, error: 'Upstream API unreachable' }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     // Fall back to serving static assets for all other requests.

@@ -55,14 +55,18 @@ function renderQr(url) {
         // Update existing QR (avoids DOM churn)
         _qrInstance.makeCode(url);
     } else {
-        // Create new QR — QRCode is loaded via <script> tag before this module
-        _qrInstance = new QRCode(box, {   // eslint-disable-line no-undef
+        // Safety-net: QRCode global must be loaded by qrcode.min.js
+        if (typeof window.QRCode === 'undefined') {
+            console.error('[event] QRCode library not loaded — cannot render QR');
+            return;
+        }
+        _qrInstance = new window.QRCode(box, {
             text: url,
             width: 260,
             height: 260,
             colorDark: '#000000',
             colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.H, // eslint-disable-line no-undef
+            correctLevel: window.QRCode.CorrectLevel.H,
         });
     }
 }
@@ -165,5 +169,7 @@ poll();
 // 3. Start polling interval
 setInterval(poll, POLL_MS);
 
-// 4. Manual refresh button
-window._doRefresh = () => poll();
+// 4. Manual refresh button — wire in JS so it's guaranteed to be set when clicked
+const _refreshBtn = document.getElementById('refreshBtn');
+if (_refreshBtn) _refreshBtn.addEventListener('click', () => poll());
+window._doRefresh = () => poll(); // kept for backward compat

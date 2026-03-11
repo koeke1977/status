@@ -9,13 +9,8 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>" />
     <link rel="stylesheet" href="/event/css/event.css" />
 
-    <!--
-    qrcodejs — lightweight, CDN-hosted QR code generator (~10 KB).
-    Loaded BEFORE the module script so `window.QRCode` is available in event.js.
-  -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
-        integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqlBAPbyc17nlAd5+HMFCnSEBBDtMt8UpF8xTiwqb5C1/EcjoeqEOhfX6Q=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- qrcodejs served locally — no CDN integrity issues -->
+    <script src="/event/js/qrcode.min.js"></script>
 </head>
 
 <body>
@@ -51,7 +46,7 @@
             </div>
 
             <!-- Manual refresh -->
-            <button class="refresh-btn" id="refreshBtn" onclick="window._doRefresh()">
+            <button class="refresh-btn" id="refreshBtn">
                 🔄 Vernieuwen
             </button>
 

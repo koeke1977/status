@@ -102,12 +102,24 @@ export default {
         });
       }
     }
-    // event.datuur.be root → redirect to /event/ (QR display page)
-    if (url.hostname === 'event.datuur.be' && (url.pathname === '/' || url.pathname === '')) {
-      return Response.redirect(new URL('/event/', request.url).toString(), 302);
+    // ── Asset serving ────────────────────────────────────────────────────────
+    // Always fetch assets using status.datuur.be as the canonical origin so the
+    // ASSETS binding never sees event.datuur.be (which would loop through the
+    // /event/ redirect and serve the wrong page).
+    //
+    // • event.datuur.be /        → serve /event/index.html  (internal rewrite)
+    // • event.datuur.be /event/* → keep path, canonical host
+    // • everything else           → keep path, canonical host
+    const CANONICAL = 'https://status.datuur.be';
+    let assetPath = url.pathname + url.search;
+    if (url.hostname === 'event.datuur.be' && (assetPath === '/' || assetPath === '')) {
+      assetPath = '/event/';
     }
-    // Serve static assets (public/index.html, public/event/*, …) for all other paths
-    return env.ASSETS.fetch(request);
+    const assetReq = new Request(CANONICAL + assetPath, {
+      method: request.method,
+      headers: request.headers,
+    });
+    return env.ASSETS.fetch(assetReq);
   },
 };
 

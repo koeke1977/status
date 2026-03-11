@@ -103,10 +103,12 @@ export default {
       }
     }
     // Serve the matching static asset from CF asset storage.
-    // env.ASSETS.fetch() resolves the path against uploaded files and returns
-    // the file directly — it does NOT re-invoke this Worker.
-    // This is always reliable regardless of CF edge-cache state.
-    return env.ASSETS.fetch(request);
+    // Strip the query string before lookup — CF Assets uses exact path matching
+    // via the binding; a query string (e.g. ?v=2) causes a 404 miss.
+    const assetRequest = url.search
+      ? new Request(url.origin + url.pathname, request)
+      : request;
+    return env.ASSETS.fetch(assetRequest);
   },
 };
 

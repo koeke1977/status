@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Inloggen — datuur.be booth status</title>
-  <link rel="stylesheet" href="/css/dashboard.css" />
+  <title>Inloggen — datuur.be booth status</title>  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>" />  <link rel="stylesheet" href="/css/dashboard.css" />
   <style>
     body {
       display: flex;
@@ -100,17 +99,19 @@
     <div class="err-msg" id="loginErr"></div>
 
     <!-- Step 1: wachtwoord -->
-    <div id="step1">
-      <div class="login-step-title">🔐 Inloggen</div>
-      <input type="password" id="pwInput" placeholder="Wachtwoord"
-        onkeydown="if(event.key==='Enter') doLogin()" autofocus />
+    <form id="step1" onsubmit="event.preventDefault(); doLogin()" autocomplete="on">
+      <div class="login-step-title">🔑 Inloggen</div>
+      <input type="text" name="username" autocomplete="username"
+        style="display:none" value="admin" readonly />
+      <input type="password" id="pwInput" name="password" placeholder="Wachtwoord"
+        autocomplete="current-password" autofocus />
       <div class="btn-row">
-        <button class="btn-primary" onclick="doLogin()">Volgende →</button>
+        <button type="submit" class="btn-primary">Volgende →</button>
       </div>
-    </div>
+    </form>
 
     <!-- Step 2: TOTP -->
-    <div id="step2" style="display:none">
+    <form id="step2" style="display:none" onsubmit="event.preventDefault(); doLoginTotp()" autocomplete="on">
       <div class="login-step-title">📱 Verificatie</div>
       <div class="totp-hint">Voer de 6-cijferige code in van je authenticator-app</div>
       <input type="text" id="totpInput" placeholder="000 000" maxlength="7"
@@ -118,10 +119,10 @@
         style="letter-spacing:0.2em;font-size:1.1rem;text-align:center"
         onkeydown="if(event.key==='Enter') doLoginTotp()" />
       <div class="btn-row">
-        <button class="btn-primary" onclick="doLoginTotp()">Inloggen</button>
-        <button class="btn-ghost" onclick="resetToStep1()">← Terug</button>
+        <button type="submit" class="btn-primary">Inloggen</button>
+        <button type="button" class="btn-ghost" onclick="resetToStep1()">← Terug</button>
       </div>
-    </div>
+    </form>
   </div>
 
 <script type="module">

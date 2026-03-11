@@ -1,0 +1,9 @@
+# Exclude files that shouldn't be served as static assets
+.git/
+.github/
+.wrangler/
+worker.js
+wrangler.jsonc
+*.toml
+*.lock
+node_modules/

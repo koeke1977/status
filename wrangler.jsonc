@@ -12,11 +12,6 @@
       "pattern": "status-api.datuur.be",
       "zone_name": "datuur.be",
       "custom_domain": true
-    },
-    {
-      "pattern": "status.datuur.be",
-      "zone_name": "datuur.be",
-      "custom_domain": true
     }
   ],
 

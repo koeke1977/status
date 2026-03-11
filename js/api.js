@@ -1,5 +1,5 @@
 /**
- * api.js — all fetch calls to status-api.datuur.be
+ * api.js — all fetch calls to the local /api proxy (forwarded to status-api.datuur.be)
  * Exports:
  *   fetchHealth()            → { data, history }
  *   adminLogin(pw)           → { ok, token?, needsTotp?, error? }
@@ -8,7 +8,7 @@
  *   sendCommand(token, payload) → { ok, error? }
  */
 
-export const API_BASE = 'https://status-api.datuur.be';
+export const API_BASE = '';
 export const BOOTH_ID = 'booth-1';
 
 export async function fetchHealth() {

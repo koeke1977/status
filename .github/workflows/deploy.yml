@@ -20,4 +20,3 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: '.'      # wrangler.jsonc is in the repo root
-          wranglerVersion: '3'

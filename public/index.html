@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Redirect event.datuur.be to the event QR page -->
+  <script>if (location.hostname === 'event.datuur.be') location.replace('/event/');</script>
+  <title>Booth Status 📷 datuur.be</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>" />
+  <link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- Header -->
+    <header>
+      <div class="logo">#datuur <span>booth status</span></div>
+      <div class="header-meta">
+        <span id="lastUpdated"></span>
+        <button class="header-btn" onclick="doRefresh()">🔄 Refresh</button>
+        <button class="header-btn danger" onclick="doLogout()">🔒 Logout</button>
+      </div>
+    </header>
+
+    <div id="offlineBanner">⚠️ Booth lijkt offline — laatste ping meer dan 2 minuten geleden</div>
+
+    <div id="loadingState">
+      <div class="spinner"></div>
+      <div>Status laden…</div>
+    </div>
+
+    <div id="mainContent">
+
+      <!-- Hero: status + event -->
+      <div class="hero">
+        <div class="hero-card">
+          <div class="label">Booth Status</div>
+          <div id="statusPill"></div>
+          <div class="sub" id="lastPing"></div>
+        </div>
+        <div class="hero-card">
+          <div class="hc-icon">📅</div>
+          <div class="label">Actief evenement</div>
+          <div class="value value-accent" id="activeEventName">—</div>
+          <div class="sub" id="photosToday"></div>
+          <div class="sub" id="eventUserCount"></div>
+          <div class="sub" id="eventPartyHosts"></div>
+          <div id="eventSwitcherWrap" style="display:none;margin-top:10px">
+            <select id="eventSwitcher" class="event-switcher-select" onchange="doSwitchEvent(this.value)"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="sc-label">Foto's vandaag</div>
+          <div class="sc-value value-accent" id="statPhotos">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Gasten gezien</div>
+          <div class="sc-value" id="statGuests">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Herkenningen</div>
+          <div class="sc-value value-green" id="statRecognition">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Booth Uptime</div>
+          <div class="sc-value" id="statUptime">—</div>
+          <div class="sc-sub" id="statUptimeSince"></div>
+        </div>
+      </div>
+
+      <!-- Admin panel -->
+      <div id="adminPanel" class="admin-panel">
+        <div class="admin-panel-header">
+          <span class="admin-panel-title">⚙️ Event instellingen</span>
+          <span class="admin-event-name" id="adminEventName">—</span>
+        </div>
+        <div class="toggles-grid" id="adminToggles"></div>
+        <div class="admin-section-label">📐 Toegestane layouts</div>
+        <div class="layouts-grid" id="adminLayouts"></div>
+        <div class="admin-section-label">⏱️ Slideshow idle timer</div>
+        <div class="timer-row">
+          <input type="number" id="slideshowTimer" class="timer-input" min="5" max="600" step="5" value="60"
+            oninput="window._adminMarkTimer(this.value, this.dataset.eventId)">
+          <span class="timer-label">sec. inactiviteit voor slideshow</span>
+        </div>
+        <div class="admin-save-bar">
+          <span class="pending-count" id="pendingCount">Geen wijzigingen</span>
+          <span class="save-feedback" id="saveFeedback"></span>
+          <button class="save-btn" id="saveBtn" onclick="saveChanges()">💾 Opslaan</button>
+        </div>
+        <div class="admin-hint">Klik <strong>Opslaan</strong> om wijzigingen door te sturen. De booth verwerkt ze bij de
+          volgende synchronisatie (~30s).</div>
+      </div>
+
+      <!-- Features + Errors side by side -->
+      <div class="two-col">
+        <div>
+          <div class="section-title">Functies</div>
+          <div class="features-overview" id="featuresOverview"></div>
+        </div>
+        <div>
+          <div id="errorsSection" style="display:none">
+            <div class="section-title">Recente fouten</div>
+            <div class="errors-list" id="errorsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System info -->
+      <div class="section-title">Systeeminformatie</div>
+      <div class="info-row" id="infoRow"></div>
+
+      <!-- Memory -->
+      <div class="section-title">Geheugengebruik</div>
+      <div class="memory-bar-wrap">
+        <div class="mem-labels">
+          <span id="memUsed">—</span>
+          <span id="memTotal">—</span>
+        </div>
+        <div class="mem-bar-bg">
+          <div class="mem-bar-fill" id="memBarFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Services -->
+      <div class="section-title">Services Status</div>
+      <div class="services-grid" id="servicesGrid"></div>
+
+      <!-- Memory sparkline -->
+      <div class="section-title">Geheugen geschiedenis</div>
+      <div class="sparkline-wrap">
+        <div class="sparkline-header">
+          <span class="sparkline-title">Laatste 100 metingen</span>
+          <span class="sparkline-peak" id="sparklinePeak"></span>
+        </div>
+        <svg id="sparkline" viewBox="0 0 400 70" preserveAspectRatio="none"></svg>
+        <div class="sparkline-x-labels">
+          <span>-5m</span><span>-4m</span><span>-3m</span><span>-2m</span><span>-1m</span><span>Nu</span>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-buttons">
+        <button class="action-btn primary" onclick="doRestartBooth()">🔄 Restart Booth</button>
+        <button class="action-btn" onclick="doRestartServices()">⚙️ Restart Services</button>
+        <button class="action-btn danger" onclick="doClearQueue()">🗑️ Clear Queue</button>
+      </div>
+
+    </div><!-- /mainContent -->
+  </div><!-- /app -->
+
+  <script type="module" src="/js/dashboard.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "booth-status",
+  "compatibility_date": "2026-03-07",
+  "main": "worker.js",
+
+  "assets": {
+    "directory": "./"
+  },
+
+  "routes": [
+    {
+      "pattern": "status-api.datuur.be",
+      "zone_name": "datuur.be",
+      "custom_domain": true
+    },
+    {
+      "pattern": "status.datuur.be",
+      "zone_name": "datuur.be",
+      "custom_domain": true
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "STATUS_KV",
+      "id": "a9d4f9988a824900ab2a6d35208db051"
+    }
+  ]
+}

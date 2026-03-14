@@ -99,7 +99,7 @@ body {
 }
 
 .live-label {
-    font-size: 0.7rem;
+    font-size: 1rem;
     font-weight: 800;
     letter-spacing: 0.2em;
     color: var(--green);
